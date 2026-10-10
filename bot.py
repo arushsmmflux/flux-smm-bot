@@ -22,7 +22,7 @@ def generate_upi_qr(amount, order_id):
         raise ValueError("Amount must be positive")
 
     params = {
-        "pa": UPI_ID,
+        "pa": "xsdevvv889@fam",
         "pn": "FLUX SMM",
         "am": f"{amount:.2f}",
         "cu": "INR",
@@ -52,12 +52,19 @@ if not ADMIN_RAW.isdigit():
     raise RuntimeError("ADMIN_ID is missing or invalid. Set your numeric Telegram user ID.")
 ADMIN_ID = int(ADMIN_RAW)
 
-# Replace these with Telegram file_ids after uploading your images
-# to the bot. You can also use a direct public image URL.
-START_IMAGE = "START_IMAGE_FILE_ID"
-PLAN_IMAGE = "PLAN_IMAGE_FILE_ID"
-# QR codes are configured inside each plan below.
-# Replace the qr value in each plan with your Telegram QR photo file_id.
+# Paste your hosted direct image URLs below (or Telegram photo file_ids).
+# Welcome image appears on /start and when users return to the home menu.
+START_IMAGE = "https://ibb.co/7NZLR5SK"
+
+# One image per platform's plan page. These images appear only on the
+# platform selection page, not inside individual service/order screens.
+PLAN_IMAGES = {
+    "instagram": "https://ibb.co/Q7NWhyCp",
+    "facebook": "https://ibb.co/xtjSNYnh",
+    "youtube": "https://ibb.co/q3cg2Sbv",
+    "telegram": "https://ibb.co/PBm8yqP",
+    "freefire": "https://ibb.co/0jYJpK1Z",
+}
 
 # Support link is kept in code, not Railway variables.
 SUPPORT_URL = "https://t.me/xylerigcc"
@@ -326,8 +333,9 @@ async def plan_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 {f("Tap a service to continue.")}"""
 
     kb = plan_keyboard(plan_key)
-    if PLAN_IMAGE and not PLAN_IMAGE.startswith("PLAN_IMAGE_"):
-        await q.message.reply_photo(photo=PLAN_IMAGE, caption=caption, reply_markup=kb)
+    plan_image = PLAN_IMAGES.get(plan_key, "")
+    if plan_image and not plan_image.startswith("PASTE_"):
+        await q.message.reply_photo(photo=plan_image, caption=caption, reply_markup=kb)
     else:
         await q.edit_message_text(caption, reply_markup=kb)
 
