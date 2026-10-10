@@ -11,6 +11,60 @@ from telegram.ext import (
     MessageHandler, ContextTypes, filters,
 )
 
+import io
+import qrcode
+from urllib.parse import urlencode
+
+UPI_ID = "xsdevvv889@fam"
+
+def generate_upi_qr(amount, order_id):
+    amount = float(amount)
+    if amount <= 0:
+        raise ValueError("Amount must be positive")
+
+    params = {
+        "pa": UPI_ID,
+        "pn": "FLUX SMM",
+        "am": f"{amount:.2f}",
+        "cu": "INR",
+        "tn": f"Order {order_id}"
+    }
+
+    upi_link = "upi://pay?" + urlencode(params)
+    qr = qrcode.make(upi_link)
+
+    image_buffer = io.BytesIO()
+    qr.save(image_buffer, format="PNG")
+    image_buffer.seek(0)
+    return image_buffer
+
+import io
+import qrcode
+from urllib.parse import urlencode
+
+UPI_ID = "xsdevvv889@fam"
+
+def generate_upi_qr(amount, order_id):
+    amount = float(amount)
+    if amount <= 0:
+        raise ValueError("Amount must be positive")
+
+    params = {
+        "pa": UPI_ID,
+        "pn": "FLUX SMM",
+        "am": f"{amount:.2f}",
+        "cu": "INR",
+        "tn": f"Order {order_id}"
+    }
+
+    upi_link = "upi://pay?" + urlencode(params)
+    qr = qrcode.make(upi_link)
+
+    image_buffer = io.BytesIO()
+    qr.save(image_buffer, format="PNG")
+    image_buffer.seek(0)
+    return image_buffer
+
 # ============================================================
 # FLUX SMM BOT
 # Python + python-telegram-bot 22.x
