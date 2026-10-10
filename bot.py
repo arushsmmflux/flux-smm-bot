@@ -22,7 +22,7 @@ def generate_upi_qr(amount, order_id):
         raise ValueError("Amount must be positive")
 
     params = {
-        "pa": "xsdevvv889@fam",
+        "pa": UPI_ID,
         "pn": "FLUX SMM",
         "am": f"{amount:.2f}",
         "cu": "INR",
@@ -71,46 +71,43 @@ SUPPORT_URL = "https://t.me/xylerigcc"
 
 # ---------- Styled text ----------
 def f(text: str) -> str:
-    """Simple Unicode mathematical bold style for Latin text."""
-    normal = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
-    bold = "𝘼𝘽𝘾𝘿𝙀𝙁𝙂𝙃𝙄𝙅𝙆𝙇𝙈𝙉𝙊𝙋𝙌𝙍𝙎𝙏𝙐𝙑𝙒𝙓𝙔𝙕"
-    bold += "𝙖𝙗𝙘𝙙𝙚𝙛𝙜𝙝𝙞𝙟𝙠𝙡𝙢𝙣𝙤𝙥𝙦𝙧𝙨𝙩𝙪𝙫𝙬𝙭𝙮𝙯"
-    bold += "𝟬𝟭𝟮𝟯𝟰𝟱𝟲𝟳𝟴𝟵"
-    table = str.maketrans(normal, bold)
-    return text.translate(table)
+    """Return readable plain text; avoids mangled caption formatting."""
+    return text
 
 def money(value):
     value = Decimal(str(value))
     return f"₹{value.quantize(Decimal('0.01'))}"
 
 # ---------- Editable bot content ----------
-START_CAPTION = f("""{f("WELCOME TO FLUX SMM")} 🚀
+START_CAPTION = """🚀 WELCOME TO FLUX SMM
 
-{f("Fast & Affordable Social Media Services")}
-{f("Instagram • Facebook • YouTube • Telegram")}
-{f("High Quality • Easy Ordering • Quick Support")}
-{f("Choose your platform below and select a service.")}
-{f("Prices are shown clearly before payment.")}
-{f("After payment, send your screenshot + UTR.")}
-{f("Admin will verify your payment manually.")}
-{f("Please enter correct details while ordering.")}
-{f("Thank you for choosing FLUX SMM ❤️")}""")
+Fast & Affordable Social Media Services
+Instagram • Facebook • YouTube • Telegram
+High Quality • Easy Ordering • Quick Support
 
-SERVICE_CAPTION = f("""{f("FLUX SMM SERVICE")} 🚀
+Choose a platform below and select a service.
+Prices are shown clearly before payment.
+After payment, send your screenshot and UTR.
+Admin will verify your payment manually.
+Please enter correct details while ordering.
 
-{f("Select a service below to place your order.")}
-{f("Choose the quantity you need.")}
-{f("The bot will calculate your total automatically.")}
-{f("Then complete payment using the QR code.")}
-{f("Send payment screenshot + UTR for approval.")}""")
+Thank you for choosing FLUX SMM ❤️"""
 
-PAYMENT_TEXT = f("""{f("PAYMENT DETAILS")} 💳
+SERVICE_CAPTION = """🚀 FLUX SMM SERVICE
 
-{f("Scan the QR code and pay the exact amount shown.")}
-{f("After payment, send your payment screenshot here.")}
-{f("Then send your UTR / transaction number.")}
-{f("Your order will be sent to admin for verification.")}
-{f("Do not send a fake or edited payment screenshot.")}""")
+Select a service below to place your order.
+Choose the quantity you need.
+The bot will calculate your total automatically.
+Then complete payment using the QR code.
+Send your payment screenshot and UTR for approval."""
+
+PAYMENT_TEXT = """💳 PAYMENT DETAILS
+
+Scan the QR code and pay the exact amount shown.
+After payment, send your payment screenshot here.
+Then send your UTR / transaction number.
+Your order will be sent to admin for verification.
+Do not send a fake or edited payment screenshot."""
 
 # service format:
 # {"name": "...", "price": Decimal/string, "unit": "...", "fixed": False}
@@ -291,11 +288,14 @@ def admin_keyboard(order_id):
 
 async def send_start(chat, bot):
     kb = main_keyboard()
-    if START_IMAGE and not START_IMAGE.startswith("START_IMAGE_"):
-        await bot.send_photo(chat_id=chat.id, photo=START_IMAGE,
-                             caption=START_CAPTION, reply_markup=kb)
-    else:
-        await bot.send_message(chat_id=chat.id, text=START_CAPTION, reply_markup=kb)
+    if START_IMAGE and not START_IMAGE.startswith(("START_IMAGE_", "PASTE_")):
+        try:
+            await bot.send_photo(chat_id=chat.id, photo=START_IMAGE,
+                                 caption=START_CAPTION, reply_markup=kb)
+            return
+        except Exception as exc:
+            print(f"Welcome image failed; sending text fallback: {exc!r}")
+    await bot.send_message(chat_id=chat.id, text=START_CAPTION, reply_markup=kb)
 
 # ============================================================
 # Handlers
@@ -322,22 +322,27 @@ async def support_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def plan_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
     await q.answer()
-    _, plan_key = q.data.split(":")
-    plan = PLANS[plan_key]
+    _, plan_key = q.data.split(":", 1)
+    plan = PLANS.get(plan_key)
+    if not plan:
+        await q.message.reply_text("Sorry, this platform was not found. Please use /start.")
+        return
 
     caption = f"""{plan["name"]} 🚀
 
-{f("Select the service you want to order.")}
-
-{f("All prices are displayed on the buttons.")}
-{f("Tap a service to continue.")}"""
+Select the service you want to order.
+All prices are displayed on the buttons.
+Tap a service to continue."""
 
     kb = plan_keyboard(plan_key)
     plan_image = PLAN_IMAGES.get(plan_key, "")
-    if plan_image and not plan_image.startswith("PASTE_"):
-        await q.message.reply_photo(photo=plan_image, caption=caption, reply_markup=kb)
-    else:
-        await q.edit_message_text(caption, reply_markup=kb)
+    if plan_image and not plan_image.startswith(("PASTE_", "PLAN_IMAGE_")):
+        try:
+            await q.message.reply_photo(photo=plan_image, caption=caption, reply_markup=kb)
+            return
+        except Exception as exc:
+            print(f"Plan image failed for {plan_key}; using text fallback: {exc!r}")
+    await q.edit_message_text(caption, reply_markup=kb)
 
 async def service_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
@@ -475,9 +480,9 @@ async def create_fixed_order(update: Update, context: ContextTypes.DEFAULT_TYPE)
 {f("Service:")} {order_data["service_name"]}
 {f("Amount:")} {money(order_data["amount"])}
 
-{f("Now send your target/link/UID in the next message.")}
+{"Send your numeric Free Fire Player UID in the next message." if order_data["plan_key"] == "freefire" else "Now send your target/link in the next message."}
 
-{f("Example: Instagram profile link, YouTube channel link, Telegram post link, or Free Fire UID as applicable.")}"""
+{"Example: 12345678901 (Free Fire UID)." if order_data["plan_key"] == "freefire" else "Example: Instagram profile link, YouTube channel link, or Telegram post link."}"""
     )
 
 async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -529,8 +534,15 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         target = update.message.text.strip()
         if len(target) < 2:
-            await update.message.reply_text(f("Please send a valid target/link/UID."))
+            await update.message.reply_text("Please send a valid target, link, or UID.")
             return
+        current_order = get_order(order_id)
+        if current_order and current_order["plan_key"] == "freefire":
+            if not target.isdigit() or not (5 <= len(target) <= 15):
+                await update.message.reply_text(
+                    "Please send your numeric Free Fire Player UID only (5–15 digits). Do not send your nickname."
+                )
+                return
 
         update_order(order_id, target=target)
         context.user_data["state"] = "payment"
@@ -613,7 +625,7 @@ async def create_variable_order(update: Update, context: ContextTypes.DEFAULT_TY
 {f("Quantity:")} {order_data["quantity"]}
 {f("Total:")} {money(order_data["amount"])}
 
-{f("Now send your target/link/UID in the next message.")}"""
+{"Send your numeric Free Fire Player UID in the next message." if order_data["plan_key"] == "freefire" else "Now send your target/link in the next message."}"""
     )
 
 async def pay_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
