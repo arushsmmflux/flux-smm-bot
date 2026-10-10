@@ -1,24 +1,23 @@
 import os
+import io
 import sqlite3
-from decimal import Decimal, InvalidOperation
-from datetime import datetime
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from datetime import datetime, timezone
+from urllib.parse import urlencode
 
-from telegram import (
-    Update, InlineKeyboardButton, InlineKeyboardMarkup,
-)
+import qrcode
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application, CommandHandler, CallbackQueryHandler,
     MessageHandler, ContextTypes, filters,
 )
 
-import io
-import qrcode
-from urllib.parse import urlencode
-
 UPI_ID = "xsdevvv889@fam"
 
+
 def generate_upi_qr(amount, order_id):
-    amount = float(amount)
+    """Generate a UPI QR with this order's exact INR amount."""
+    amount = Decimal(str(amount)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
     if amount <= 0:
         raise ValueError("Amount must be positive")
 
@@ -27,40 +26,12 @@ def generate_upi_qr(amount, order_id):
         "pn": "FLUX SMM",
         "am": f"{amount:.2f}",
         "cu": "INR",
-        "tn": f"Order {order_id}"
+        "tn": f"FLUX SMM Order {order_id}",
     }
-
     upi_link = "upi://pay?" + urlencode(params)
     qr = qrcode.make(upi_link)
-
     image_buffer = io.BytesIO()
-    qr.save(image_buffer, format="PNG")
-    image_buffer.seek(0)
-    return image_buffer
-
-import io
-import qrcode
-from urllib.parse import urlencode
-
-UPI_ID = "xsdevvv889@fam"
-
-def generate_upi_qr(amount, order_id):
-    amount = float(amount)
-    if amount <= 0:
-        raise ValueError("Amount must be positive")
-
-    params = {
-        "pa": UPI_ID,
-        "pn": "FLUX SMM",
-        "am": f"{amount:.2f}",
-        "cu": "INR",
-        "tn": f"Order {order_id}"
-    }
-
-    upi_link = "upi://pay?" + urlencode(params)
-    qr = qrcode.make(upi_link)
-
-    image_buffer = io.BytesIO()
+    image_buffer.name = f"flux_smm_order_{order_id}.png"
     qr.save(image_buffer, format="PNG")
     image_buffer.seek(0)
     return image_buffer
@@ -139,7 +110,6 @@ PAYMENT_TEXT = f("""{f("PAYMENT DETAILS")} 💳
 # fixed=True means the listed price is the complete package price.
 PLANS = {
     "instagram": {
-        "qr": "PASTE_YOUR_QR_FILE_ID_HERE",
         "name": f("INSTAGRAM"),
         "services": [
             {"name": f("LIKES NON DROP"), "price": "20", "unit": "1K", "fixed": False},
@@ -152,7 +122,6 @@ PLANS = {
         ],
     },
     "facebook": {
-        "qr": "PASTE_YOUR_QR_FILE_ID_HERE",
         "name": f("FACEBOOK"),
         "services": [
             {"name": f("FOLLOWERS DROP"), "price": "20", "unit": "1K", "fixed": False},
@@ -164,7 +133,6 @@ PLANS = {
         ],
     },
     "youtube": {
-        "qr": "PASTE_YOUR_QR_FILE_ID_HERE",
         "name": f("YOUTUBE"),
         "services": [
             {"name": f("SUBSCRIBERS NO DROP"), "price": "39", "unit": "1K", "fixed": False},
@@ -176,7 +144,6 @@ PLANS = {
         ],
     },
     "telegram": {
-        "qr": "PASTE_YOUR_QR_FILE_ID_HERE",
         "name": f("TELEGRAM"),
         "services": [
             {"name": f("CHANNEL MEMBERS NON DROP"), "price": "20", "unit": "1K", "fixed": False},
@@ -187,7 +154,6 @@ PLANS = {
         ],
     },
     "freefire": {
-        "qr": "PASTE_YOUR_QR_FILE_ID_HERE",
         "name": f("FREE FIRE LIKES"),
         "services": [
             {"name": f("10K FF LIKES"), "price": "29", "unit": "PACKAGE", "fixed": True},
@@ -240,7 +206,7 @@ def create_order(data):
         data["user_id"], data.get("username"), data["plan_key"],
         data["service_name"], data.get("quantity"), data.get("target"),
         data.get("custom_text"), str(data["amount"]),
-        datetime.utcnow().isoformat()
+        datetime.now(timezone.utc).isoformat()
     ))
     order_id = cur.lastrowid
     con.commit()
@@ -666,14 +632,14 @@ async def pay_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 {f("After payment, send your payment screenshot here.")}"""
 
-    plan = PLANS.get(order["plan_key"])
-    qr = plan.get("qr", "") if plan else ""
-
-    if qr and qr != "PASTE_YOUR_QR_FILE_ID_HERE":
-        await q.message.reply_photo(photo=qr, caption=caption)
-    else:
+    # Create a fresh QR for the exact saved order amount.
+    try:
+        qr_image = generate_upi_qr(order["amount"], order_id)
+        await q.message.reply_photo(photo=qr_image, caption=caption)
+    except Exception as exc:
+        print(f"QR generation/send failed for order #{order_id}: {exc!r}")
         await q.message.reply_text(
-            caption + "\n\n" + f("⚠️ QR IMAGE NOT SET — add the QR file_id in this plan's qr field in bot.py."),
+            caption + "\n\n" + f("QR could not be generated. Please contact support."),
         )
 
 async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -829,8 +795,8 @@ def main():
     app.add_handler(MessageHandler(filters.Document.ALL, document_handler))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_handler))
 
-    print("FLUX SMM bot is running...")
-    app.run_polling(allowed_updates=Update.ALL_TYPES)
+    print("FLUX SMM bot is starting. Ensure only ONE running instance uses this BOT_TOKEN.")
+    app.run_polling(allowed_updates=Update.ALL_TYPES, drop_pending_updates=False)
 
 if __name__ == "__main__":
     main()
