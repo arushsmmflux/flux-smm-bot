@@ -1,6 +1,10 @@
 import os
 import io
 import sqlite3
+import asyncio
+from html.parser import HTMLParser
+from urllib.request import Request, urlopen
+from urllib.parse import urljoin
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from datetime import datetime, timezone
 from urllib.parse import urlencode
@@ -68,6 +72,59 @@ PLAN_IMAGES = {
 
 # Support link is kept in code, not Railway variables.
 SUPPORT_URL = "https://t.me/xylerigcc"
+
+
+class _ImageMetaParser(HTMLParser):
+    """Find the actual image URL embedded in an ImgBB share page."""
+    def __init__(self):
+        super().__init__()
+        self.image_url = None
+
+    def handle_starttag(self, tag, attrs):
+        if tag.lower() != "meta":
+            return
+        attrs = dict(attrs)
+        key = (attrs.get("property") or attrs.get("name") or "").lower()
+        if key in ("og:image", "twitter:image", "twitter:image:src") and attrs.get("content"):
+            self.image_url = attrs["content"]
+
+def load_hosted_image(url: str):
+    """Download an image from either a direct URL or an ImgBB page URL.
+
+    Telegram cannot use an ImgBB webpage URL directly as a photo, so this
+    fetches the page, reads its og:image metadata, then downloads the image.
+    Returns a Telegram-compatible BytesIO object.
+    """
+    headers = {"User-Agent": "Mozilla/5.0 (compatible; FluxSMMBot/1.0)"}
+    req = Request(url, headers=headers)
+    with urlopen(req, timeout=15) as response:
+        content_type = response.headers.get("Content-Type", "").lower()
+        body = response.read(12 * 1024 * 1024 + 1)
+        final_url = response.geturl()
+    if len(body) > 12 * 1024 * 1024:
+        raise ValueError("Image is larger than 12 MB")
+
+    if content_type.startswith("image/"):
+        image_bytes = body
+    else:
+        parser = _ImageMetaParser()
+        parser.feed(body.decode("utf-8", errors="replace"))
+        if not parser.image_url:
+            raise ValueError("Could not find the actual image in this hosting page")
+        image_url = urljoin(final_url, parser.image_url)
+        image_req = Request(image_url, headers=headers)
+        with urlopen(image_req, timeout=15) as response:
+            image_type = response.headers.get("Content-Type", "").lower()
+            image_bytes = response.read(12 * 1024 * 1024 + 1)
+        if len(image_bytes) > 12 * 1024 * 1024:
+            raise ValueError("Image is larger than 12 MB")
+        if not image_type.startswith("image/"):
+            raise ValueError("ImgBB did not return an image file")
+
+    photo = io.BytesIO(image_bytes)
+    photo.name = "flux_smm_image.jpg"
+    photo.seek(0)
+    return photo
 
 # ---------- Styled text ----------
 def f(text: str) -> str:
@@ -290,7 +347,8 @@ async def send_start(chat, bot):
     kb = main_keyboard()
     if START_IMAGE and not START_IMAGE.startswith(("START_IMAGE_", "PASTE_")):
         try:
-            await bot.send_photo(chat_id=chat.id, photo=START_IMAGE,
+            photo = await asyncio.to_thread(load_hosted_image, START_IMAGE)
+            await bot.send_photo(chat_id=chat.id, photo=photo,
                                  caption=START_CAPTION, reply_markup=kb)
             return
         except Exception as exc:
@@ -338,11 +396,12 @@ Tap a service to continue."""
     plan_image = PLAN_IMAGES.get(plan_key, "")
     if plan_image and not plan_image.startswith(("PASTE_", "PLAN_IMAGE_")):
         try:
-            await q.message.reply_photo(photo=plan_image, caption=caption, reply_markup=kb)
-            return
+            # Keep buttons on a text message: Telegram cannot edit a photo as text.
+            photo = await asyncio.to_thread(load_hosted_image, plan_image)
+            await q.message.reply_photo(photo=photo, caption=caption)
         except Exception as exc:
-            print(f"Plan image failed for {plan_key}; using text fallback: {exc!r}")
-    await q.edit_message_text(caption, reply_markup=kb)
+            print(f"Plan image failed for {plan_key}; continuing with text menu: {exc!r}")
+    await q.message.reply_text(caption, reply_markup=kb)
 
 async def service_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
