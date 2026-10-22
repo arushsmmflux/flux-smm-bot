@@ -14,6 +14,7 @@ import qrcode
 
 BOT_TOKEN = "8848096554:AAGO-JgELGnyTdPyw8ssds7fCUoImNmNnSo"
 ADMIN_ID = 6516697207
+
 # =========================================================
 # LOGGING & DATABASE SETUP
 # =========================================================
@@ -63,10 +64,7 @@ def set_active_token(new_token):
 
 CURRENT_TOKEN = get_active_token()
 bot = telebot.TeleBot(CURRENT_TOKEN, parse_mode="HTML")
-try:
-    bot.remove_webhook()
-except Exception:
-    pass
+
 def get_current_upi():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
