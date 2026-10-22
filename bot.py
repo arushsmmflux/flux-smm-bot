@@ -14,7 +14,6 @@ import qrcode
 
 BOT_TOKEN = "8848096554:AAGO-JgELGnyTdPyw8ssds7fCUoImNmNnSo"
 ADMIN_ID = 6516697207
-
 # =========================================================
 # LOGGING & DATABASE SETUP
 # =========================================================
@@ -100,7 +99,7 @@ WELCOME_IMAGE = "https://ibb.co/RGL77cpn"
 START_IMAGE = "https://ibb.co/GhbLV5P"
 
 # =========================================================
-# 10 PLANS (SAARE ORIGINAL DEMOS COMPLETE INCLUDED)
+# 10 PLANS (ALL ORIGINAL DEMO URLS RESTORED)
 # =========================================================
 
 PLANS = [
@@ -232,7 +231,7 @@ PLANS = [
             {"type": "video", "id": "https://videotourl.com/videos/1791611593469-187437c5-8f84-41c6-afa1-3d61feb9ff72.mp4"},
             {"type": "video", "id": "https://videotourl.com/videos/1791611552865-c2cf6f7d-1544-4c34-9bdb-5e5fb2092584.mp4"}
         ],
-        "caption": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍\n4. 𝙉𝙀𝙒 𝙑𝙄𝘿𝙀𝙊𝙎 𝙐𝙋𝙇𝙊𝘼𝘿𝙀𝘿 𝙀𝙑𝙀𝙍𝙔 𝙁𝙍I𝘿𝘼𝙔 ✅.",
+        "caption": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍\n4. 𝙉𝙀𝙒 𝙑𝙄𝘿𝙀𝙊𝙎 𝙐𝙋𝙇𝙊𝘼𝘿𝙀𝘿 𝙀𝙑𝙀𝙍𝙔 𝙁𝙍𝙄𝘿𝘼𝙔 ✅.",
         "active": True
     },
     {
@@ -259,3 +258,430 @@ PLANS = [
         "active": True
     }
 ]
+
+STYLE_SERIES = ["danger", "success", "primary", "danger", "success", "primary"]
+
+def button(text, data=None, url=None, style=None):
+    kwargs = {"text": text}
+    if data is not None: kwargs["callback_data"] = data
+    if url is not None: kwargs["url"] = url
+    if style is not None: kwargs["style"] = style
+    return InlineKeyboardButton(**kwargs)
+
+def add_styled(kb, text, data=None, url=None, index=0):
+    style = STYLE_SERIES[index % len(STYLE_SERIES)]
+    kb.add(button(text, data=data, url=url, style=style))
+
+def get_plan(pid):
+    for plan in PLANS:
+        if plan["id"] == pid and plan.get("active"):
+            return plan
+    return None
+
+def generate_upi_qr(upi_id: str, amount: float, payee_name: str = "VIP Access") -> io.BytesIO:
+    upi_url = f"upi://pay?pa={upi_id}&pn={payee_name}&am={amount:.2f}&cu=INR"
+    qr = qrcode.QRCode(box_size=10, border=2)
+    qr.add_data(upi_url)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+    return buf
+
+def generate_txn_id(plan_id: int) -> str:
+    date_str = datetime.datetime.now().strftime("%y%m%d")
+    rand_str = f"{random.randint(1000, 9999)}"
+    return f"TXN-{date_str}-{plan_id}-{rand_str}"
+
+def safe_delete_message(chat_id, message_id):
+    try:
+        bot.delete_message(chat_id, message_id)
+    except Exception:
+        pass
+
+# =========================================================
+# UI SCREENS (AUTO DELETE PREVIOUS MESSAGES)
+# =========================================================
+
+START_CAPTION = " 𝘽𝙚𝙛𝙤𝙧𝙚 𝙘𝙤𝙣𝙩𝙞𝙣𝙪𝙞𝙣𝙜, 𝙥𝙡𝙚𝙖𝙨𝙚 𝙘𝙤𝙣𝙛𝙞𝙧𝙢 𝙮𝙤𝙪 𝙖𝙧𝙚 18 𝙤𝙧 𝙤𝙡𝙙𝙚𝙧."
+
+def send_start_screen(chat_id, edit_message_id=None):
+    kb = InlineKeyboardMarkup()
+    kb.row(
+        button(" 𝙔𝙀𝙎 𝙄 𝘼𝙈 18+ ✅", data="free", style="success"),
+        button("𝙄 𝘼𝙈 𝙉𝙊𝙏 18+ ❌", data="paid_warning", style="danger")
+    )
+    if edit_message_id:
+        safe_delete_message(chat_id, edit_message_id)
+    try:
+        bot.send_photo(chat_id, START_IMAGE, caption=START_CAPTION, reply_markup=kb)
+    except Exception:
+        bot.send_message(chat_id, START_CAPTION, reply_markup=kb)
+
+def send_paid_screen(chat_id, edit_message_id=None):
+    kb = InlineKeyboardMarkup()
+    add_styled(kb, "🔙 𝘽𝘼𝘾𝙆", data="start", index=2)
+    if edit_message_id:
+        safe_delete_message(chat_id, edit_message_id)
+    bot.send_message(chat_id, " <b>𝙏𝙃𝙄𝙎 𝘽𝙊𝙏 𝙄𝙎 𝙊𝙉𝙇𝙔 𝙁𝙊𝙍 18+ 𝙐𝙎𝙀𝙍𝙎‼️</b>\n\n", reply_markup=kb)
+
+WELCOME_CAPTION = (
+    "<b> 𝙃𝙀𝙔 👋🏻, 𝙒𝙚𝙡𝙘𝙤𝙢𝙚 𝙩𝙤 𝙤𝙪𝙧 𝙫𝙞𝙥 𝙗𝙤𝙩  😍</b> \n\n"
+    "𝙏𝙃𝙄𝙎 𝘽𝙊𝙏 𝘾𝙊𝙉𝘼𝙏𝘼𝙄𝙉 𝙁𝙊𝙇𝙇𝙊𝙒𝙄𝙉𝙂 𝙋𝙇𝘼𝙉𝙎 ✅\n"
+    "𝙎𝙏𝘼𝙍𝙏𝙄𝙉𝙂 𝙋𝙍𝙄𝘾𝙀 𝙄𝙎 𝙅𝙐𝙎𝙏 ₹39 ‼️\n\n"
+    "𝘽𝙀𝙉𝙄𝙁𝙄𝙏𝙎 𝙊𝙐𝙍 𝘽𝙊𝙏 ✅ \n"
+    "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙑𝙄𝘿𝙀𝙊𝙎 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅ \n"
+    "2. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝘿𝙊𝙒𝙉𝙇𝙊𝘼𝘿 𝙁𝙍𝙀𝙀 ✅ \n"
+    "3. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ✅ \n"
+    "4. 𝘿IRECT 𝙒𝘼𝙏𝘾𝙃 𝙑𝙄𝘿𝙀𝙊𝙎 ✅ \n"
+    "<b>𝙏𝙊 𝘽𝙐𝙔 𝙋𝙇𝘼𝙉𝙎 𝘾𝙃𝙀𝘾𝙆 𝘽𝙐𝙏𝙏𝙊𝙉𝙎 𝘽𝙀𝙇𝙊𝙒 𝘼𝙉𝘿 𝘾𝙃𝙀𝘾𝙆 𝘿𝙀𝙈𝙊 𝘼𝙇𝙎𝙊</b> 😍🔥"
+)
+
+def send_home(chat_id, edit_message_id=None):
+    kb = InlineKeyboardMarkup()
+    active_plans = [p for p in PLANS if p.get("active")]
+    for i, p in enumerate(active_plans):
+        add_styled(kb, f" {p['name']} · ₹{p['price']}", data=f"plan:{p['id']}", index=i)
+
+    add_styled(kb, "🎬 𝘿𝙀𝙈𝙊", data="demo_menu", index=0)
+    add_styled(kb, " 𝙎𝙐𝙋𝙋𝙊𝙍𝙏📞", url=SUPPORT_LINK, index=1)
+    
+    if edit_message_id:
+        safe_delete_message(chat_id, edit_message_id)
+    try:
+        bot.send_photo(chat_id, WELCOME_IMAGE, caption=WELCOME_CAPTION, reply_markup=kb)
+    except Exception:
+        bot.send_message(chat_id, WELCOME_CAPTION, reply_markup=kb)
+
+def send_demo_menu(chat_id, edit_message_id=None):
+    kb = InlineKeyboardMarkup()
+    active_plans = [p for p in PLANS if p.get("active")]
+    for i, p in enumerate(active_plans):
+        add_styled(kb, f"🎬 {p['name']}", data=f"demo_plan:{p['id']}", index=i)
+    add_styled(kb, "🔙 𝘽𝘼𝘾𝙆", data="home", index=2)
+    
+    if edit_message_id:
+        safe_delete_message(chat_id, edit_message_id)
+    bot.send_message(chat_id, "🎬 <b>𝘿𝙀𝙈𝙊</b>\n\n𝘿𝙚𝙢𝙤 𝙙𝙚𝙠𝙝𝙣𝙚 𝙠𝙚 𝙡𝙞𝙮𝙚 𝙠𝙤𝙞 𝙥𝙡𝙖𝙣 𝙨𝙚𝙡𝙚𝙘𝙩 𝙠𝙖𝙧𝙤.\n\n👇 <b>𝙎𝙚𝙡𝙚𝙘𝙩 𝙖 𝙥𝙡𝙖𝙣:</b>", reply_markup=kb)
+
+# PLAN DETAILS & MEDIA GROUP DEMO WITH SPOILERS
+def send_plan(chat_id, plan, edit_message_id=None):
+    if edit_message_id:
+        safe_delete_message(chat_id, edit_message_id)
+
+    if plan["id"] == 10:
+        send_payment(chat_id, chat_id, plan)
+        return
+
+    demos = plan.get("demos", [])
+    if demos:
+        media_group = []
+        for media in demos:
+            if media["type"] == "photo":
+                media_group.append(InputMediaPhoto(media["id"], has_spoiler=True))
+            elif media["type"] == "video":
+                media_group.append(InputMediaVideo(media["id"], has_spoiler=True))
+        
+        try:
+            bot.send_media_group(chat_id, media_group)
+            bot.send_message(chat_id, "👆 <b>Click on videos to see demo</b>", parse_mode="HTML")
+        except Exception as e:
+            log.exception(f"Error sending media group: {e}")
+
+    caption = (
+        f"📦 <b>{plan['name']}</b>\n\n"
+        f"💰 <b>𝙋𝙧𝙞𝙘𝙚:</b> ₹{plan['price']}\n"
+        f"⏳ <b>𝙑𝙖𝙡𝙞𝙙𝙞𝙩𝙮:</b> {plan['validity']}\n"
+        f"🎬 <b>𝙑𝙞𝙙𝙚𝙤𝙨:</b> {plan['videos']}\n\n"
+        f"{plan['caption']}"
+    )
+    kb = InlineKeyboardMarkup()
+    kb.row(button("🟢 𝘽𝙐𝙔 𝙉𝙊𝙒 💳", data=f"buy:{plan['id']}", style="success"))
+    kb.row(button("🔵 𝘽𝘼𝘾𝙆 𝙏𝙊 𝙋𝙇𝘼𝙉𝙎", data="home", style="primary"))
+    
+    bot.send_message(chat_id, caption, parse_mode="HTML", reply_markup=kb)
+
+def send_payment(chat_id, user_id, plan, edit_message_id=None):
+    if edit_message_id:
+        safe_delete_message(chat_id, edit_message_id)
+
+    current_upi = get_current_upi()
+    txn_id = generate_txn_id(plan["id"])
+    
+    try:
+        qr_buffer = generate_upi_qr(current_upi, float(plan["price"]))
+        qr_buffer.seek(0)
+    except Exception as e:
+        log.exception(f"QR Error: {e}")
+        bot.send_message(chat_id, "❌ QR code generation error.")
+        return
+
+    kb = InlineKeyboardMarkup()
+    kb.row(button("🟢 𝙄 𝙋𝘼𝙄𝘿 ✅", data=f"paid:{plan['id']}:{txn_id}", style="success"))
+    kb.row(button("🔵 𝘽𝘼𝘾𝙆 ⬅️", data="home", style="primary"))
+
+    caption = (
+        f"💳 <b>𝙋𝘼𝙔𝙈𝙀𝙉𝙏 𝙋𝘼𝙂𝙀</b>\n\n"
+        f"📦 <b>Plan:</b> {plan['name']}\n"
+        f"💰 <b>Amount:</b> ₹{plan['price']}\n"
+        f"🆔 <b>TXN:</b> <code>{txn_id}</code>\n"
+        f"💎 <b>UPI:</b> <code>{current_upi}</code> (tap to copy)\n\n"
+        "1️⃣ Scan QR or copy UPI ID.\n"
+        "2️⃣ Pay exact amount.\n"
+        "3️⃣ Click <b>𝙄 𝙋𝘼𝙄𝘿 ✅</b> & send screenshot."
+    )
+
+    bot.send_photo(chat_id, photo=qr_buffer, caption=caption, parse_mode="HTML", reply_markup=kb)
+    waiting_screenshot.add(user_id)
+    pending_orders[user_id] = {"plan_id": plan["id"], "txn_id": txn_id}
+
+waiting_screenshot = set()
+pending_orders = {}
+
+# =========================================================
+# HANDLERS
+# =========================================================
+
+@bot.message_handler(commands=["start"])
+def start(message):
+    add_user_db(message.from_user.id)
+    send_start_screen(message.chat.id)
+
+@bot.callback_query_handler(func=lambda call: call.data == "free")
+def free_button(call):
+    bot.answer_callback_query(call.id)
+    send_home(call.message.chat.id, edit_message_id=call.message.message_id)
+
+@bot.callback_query_handler(func=lambda call: call.data == "paid_warning")
+def paid_warning_button(call):
+    bot.answer_callback_query(call.id)
+    send_paid_screen(call.message.chat.id, edit_message_id=call.message.message_id)
+
+@bot.callback_query_handler(func=lambda call: call.data == "start")
+def start_back(call):
+    bot.answer_callback_query(call.id)
+    send_start_screen(call.message.chat.id, edit_message_id=call.message.message_id)
+
+@bot.callback_query_handler(func=lambda call: call.data == "home")
+def home_button(call):
+    bot.answer_callback_query(call.id)
+    send_home(call.message.chat.id, edit_message_id=call.message.message_id)
+
+@bot.callback_query_handler(func=lambda call: call.data == "demo_menu")
+def demo_button(call):
+    bot.answer_callback_query(call.id)
+    send_demo_menu(call.message.chat.id, edit_message_id=call.message.message_id)
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("plan:"))
+def plan_button(call):
+    bot.answer_callback_query(call.id)
+    try:
+        plan_id = int(call.data.split(":")[1])
+    except Exception:
+        return
+    plan = get_plan(plan_id)
+    if plan:
+        send_plan(call.message.chat.id, plan, edit_message_id=call.message.message_id)
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("demo_plan:"))
+def demo_plan_button(call):
+    bot.answer_callback_query(call.id)
+    try:
+        plan_id = int(call.data.split(":")[1])
+    except Exception:
+        return
+    plan = get_plan(plan_id)
+    if plan:
+        send_plan(call.message.chat.id, plan, edit_message_id=call.message.message_id)
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("buy:"))
+def buy_button(call):
+    bot.answer_callback_query(call.id)
+    try:
+        plan_id = int(call.data.split(":")[1])
+    except Exception:
+        return
+    plan = get_plan(plan_id)
+    if plan:
+        send_payment(call.message.chat.id, call.from_user.id, plan, edit_message_id=call.message.message_id)
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("paid:"))
+def paid_confirm(call):
+    bot.answer_callback_query(call.id)
+    try:
+        parts = call.data.split(":")
+        plan_id = int(parts[1])
+    except Exception:
+        return
+    plan = get_plan(plan_id)
+    if not plan:
+        return
+    uid = call.from_user.id
+    waiting_screenshot.add(uid)
+    bot.send_message(call.message.chat.id, "📸 <b>𝙎𝙚𝙣𝙙 𝙮𝙤𝙪𝙧 𝙥𝙖𝙮𝙢𝙚𝙣𝙩 𝙨𝙘𝙧𝙚𝙚𝙣𝙨𝙝𝙤𝙩 𝙖𝙨 𝙖 𝙥𝙝𝙤𝙩𝙤.</b>", parse_mode="HTML")
+
+@bot.message_handler(content_types=["photo"])
+def screenshot_handler(message):
+    uid = message.from_user.id
+    if uid not in waiting_screenshot:
+        return
+    
+    order = pending_orders.get(uid, {})
+    plan_id = order.get("plan_id", 1)
+    txn_id = order.get("txn_id", "N/A")
+    plan = get_plan(plan_id)
+    plan_name = plan["name"] if plan else "VIP Plan"
+
+    waiting_screenshot.discard(uid)
+    pending_orders.pop(uid, None)
+
+    screenshot_id = message.photo[-1].file_id
+
+    admin_kb = InlineKeyboardMarkup()
+    admin_kb.row(
+        button("🟢 APPROVE", callback_data=f"admin_approve:{uid}:{plan_id}:{txn_id}", style="success"),
+        button("🔴 REJECT", callback_data=f"admin_reject:{uid}", style="danger")
+    )
+
+    bot.send_photo(
+        ADMIN_ID,
+        screenshot_id,
+        caption=(
+            f"📥 <b>NEW PAYMENT PROOF</b>\n\n"
+            f"👤 User: {message.from_user.full_name}\n"
+            f"🆔 User ID: <code>{uid}</code>\n"
+            f"📦 Plan: {plan_name}\n"
+            f"🧾 TXN: <code>{txn_id}</code>"
+        ),
+        parse_mode="HTML",
+        reply_markup=admin_kb
+    )
+    bot.send_message(message.chat.id, "✅ Screenshot submitted! Please wait for admin approval.")
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("admin_approve:"))
+def handle_admin_approve(call):
+    if call.from_user.id != ADMIN_ID:
+        bot.answer_callback_query(call.id, "Not authorized", show_alert=True)
+        return
+    parts = call.data.split(":")
+    user_id = int(parts[1])
+    plan_id = int(parts[2])
+    txn_id = parts[3]
+    plan = get_plan(plan_id)
+    plan_name = plan["name"] if plan else "VIP Plan"
+
+    try:
+        bot.send_message(user_id, f"✅ <b>Payment Approved!</b>\nYour access for {plan_name} is active.", parse_mode="HTML")
+    except Exception:
+        pass
+
+    screenshot_id = call.message.photo[-1].file_id if call.message.photo else None
+    broadcast_caption = f"🎉 <b>SUCCESSFUL PURCHASE</b> 🎉\n\n📦 Plan: {plan_name}\n🟢 STATUS - UNLOCKED"
+
+    for uid in get_all_users():
+        try:
+            if screenshot_id:
+                bot.send_photo(uid, screenshot_id, caption=broadcast_caption, parse_mode="HTML", reply_markup=get_home_keyboard())
+            else:
+                bot.send_message(uid, broadcast_caption, parse_mode="HTML", reply_markup=get_home_keyboard())
+        except Exception:
+            pass
+
+    bot.edit_message_caption(chat_id=call.message.chat.id, message_id=call.message.message_id, caption=(call.message.caption or "") + "\n\n🟢 <b>APPROVED</b>", parse_mode="HTML")
+    bot.answer_callback_query(call.id, "Approved successfully!")
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("admin_reject:"))
+def handle_admin_reject(call):
+    if call.from_user.id != ADMIN_ID:
+        bot.answer_callback_query(call.id, "Not authorized", show_alert=True)
+        return
+    parts = call.data.split(":")
+    user_id = int(parts[1])
+    try:
+        bot.send_message(user_id, "❌ <b>Payment Rejected.</b> Contact support if you think this is a mistake.", parse_mode="HTML")
+    except Exception:
+        pass
+    bot.edit_message_caption(chat_id=call.message.chat.id, message_id=call.message.message_id, caption=(call.message.caption or "") + "\n\n🔴 <b>REJECTED</b>", parse_mode="HTML")
+    bot.answer_callback_query(call.id, "Rejected!")
+
+def get_home_keyboard():
+    kb = InlineKeyboardMarkup()
+    for p in PLANS:
+        if p.get("active"):
+            kb.add(button(f"{p['name']} · ₹{p['price']}", callback_data=f"plan:{p['id']}"))
+    return kb
+
+# =========================================================
+# ADMIN COMMANDS (/upi, /broadcast, /getid, /changebot)
+# =========================================================
+
+@bot.message_handler(commands=["upi"])
+def cmd_set_upi(message):
+    if message.from_user.id != ADMIN_ID: return
+    msg = bot.send_message(message.chat.id, "✍️ <b>Send the new UPI ID:</b>", parse_mode="HTML")
+    bot.register_next_step_handler(msg, process_new_upi)
+
+def process_new_upi(message):
+    if message.from_user.id != ADMIN_ID: return
+    new_upi = message.text.strip()
+    if "@" not in new_upi:
+        bot.send_message(message.chat.id, "❌ Invalid UPI ID.")
+        return
+    set_current_upi(new_upi)
+    bot.send_message(message.chat.id, f"✅ <b>UPI updated to:</b> <code>{new_upi}</code>", parse_mode="HTML")
+
+@bot.message_handler(commands=["changebot"])
+def cmd_change_bot(message):
+    if message.from_user.id != ADMIN_ID: return
+    msg = bot.send_message(message.chat.id, "🔑 <b>Send the new Telegram Bot Token:</b>", parse_mode="HTML")
+    bot.register_next_step_handler(msg, process_new_bot_token)
+
+def process_new_bot_token(message):
+    if message.from_user.id != ADMIN_ID: return
+    new_token = message.text.strip()
+    if ":" not in new_token or len(new_token) < 20:
+        bot.send_message(message.chat.id, "❌ Invalid Bot Token format.")
+        return
+    set_active_token(new_token)
+    bot.send_message(message.chat.id, "✅ <b>Bot Token updated successfully!</b>\nPlease restart your bot for full effect.", parse_mode="HTML")
+
+@bot.message_handler(commands=["broadcast"])
+def cmd_broadcast(message):
+    if message.from_user.id != ADMIN_ID: return
+    msg = bot.send_message(message.chat.id, "📢 <b>Send message to broadcast:</b>", parse_mode="HTML")
+    bot.register_next_step_handler(msg, process_broadcast)
+
+def process_broadcast(message):
+    if message.from_user.id != ADMIN_ID: return
+    sent, failed = 0, 0
+    for uid in get_all_users():
+        try:
+            bot.copy_message(chat_id=uid, from_chat_id=message.chat.id, message_id=message.message_id)
+            sent += 1
+        except Exception:
+            failed += 1
+    bot.send_message(message.chat.id, f"✅ <b>Broadcast complete.</b>\nSent: {sent}\nFailed: {failed}", parse_mode="HTML")
+
+@bot.message_handler(commands=["getid"])
+def cmd_get_id(message):
+    if message.from_user.id != ADMIN_ID: return
+    msg = bot.send_message(message.chat.id, "📹 Send any Photo or Video to get its File ID:")
+    bot.register_next_step_handler(msg, process_get_id)
+
+def process_get_id(message):
+    if message.from_user.id != ADMIN_ID: return
+    if message.photo:
+        fid = message.photo[-1].file_id
+        bot.send_message(message.chat.id, f"🖼 Photo File ID:\n<code>{fid}</code>", parse_mode="HTML")
+    elif message.video:
+        fid = message.video.file_id
+        bot.send_message(message.chat.id, f"🎥 Video File ID:\n<code>{fid}</code>", parse_mode="HTML")
+
+# =========================================================
+# POLLING
+# =========================================================
+
+if __name__ == "__main__":
+    log.info("🚀 Bot is starting...")
+    bot.infinity_polling()
