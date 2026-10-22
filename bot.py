@@ -383,11 +383,26 @@ def send_plan(chat_id, plan, edit_message_id=None):
             elif media["type"] == "video":
                 media_group.append(InputMediaVideo(media["id"], has_spoiler=True))
         
-        try:
-            bot.send_media_group(chat_id, media_group)
-            bot.send_message(chat_id, "👆 <b>Click on videos to see demo</b>", parse_mode="HTML")
-        except Exception as e:
-            log.exception(f"Error sending media group: {e}")
+        sent_successfully = False
+        if media_group:
+            try:
+                bot.send_media_group(chat_id, media_group)
+                sent_successfully = True
+            except Exception as e:
+                log.warning(f"Media group failed for Plan {plan['id']}, sending individually: {e}")
+
+        # Agar Media Group fast load na ho paaye toh ek-ek karke sari videos bhej do
+        if not sent_successfully:
+            for media in demos:
+                try:
+                    if media["type"] == "photo":
+                        bot.send_photo(chat_id, media["id"], has_spoiler=True)
+                    elif media["type"] == "video":
+                        bot.send_video(chat_id, media["id"], has_spoiler=True)
+                except Exception:
+                    pass
+
+        bot.send_message(chat_id, "👆 <b>Click on videos to see demo</b>", parse_mode="HTML")
 
     caption = (
         f"📦 <b>{plan['name']}</b>\n\n"
@@ -398,10 +413,9 @@ def send_plan(chat_id, plan, edit_message_id=None):
     )
     kb = InlineKeyboardMarkup()
     kb.row(button("🟢 𝘽𝙐𝙔 𝙉𝙊𝙒 💳", data=f"buy:{plan['id']}", style="success"))
-    kb.row(button("🔵 𝘽𝘼𝘾𝙆 𝙏𝙊 𝙋𝙇𝘼𝙉𝙎", data="home", style="primary"))
-    
+    kb.row(button("🔵 𝘽𝘼𝘾𝙆", data="home", style="primary"))
     bot.send_message(chat_id, caption, parse_mode="HTML", reply_markup=kb)
-
+    
 def send_payment(chat_id, user_id, plan, edit_message_id=None):
     if edit_message_id:
         safe_delete_message(chat_id, edit_message_id)
