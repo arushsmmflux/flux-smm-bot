@@ -1,881 +1,688 @@
 import os
 import io
+import logging
+import random
+import datetime
 import sqlite3
-import asyncio
-from html.parser import HTMLParser
-from urllib.request import Request, urlopen
-from urllib.parse import urljoin
-from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
-from datetime import datetime, timezone
-from urllib.parse import urlencode
-
+import telebot
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, InputMediaVideo, InputMediaPhoto
 import qrcode
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import (
-    Application, CommandHandler, CallbackQueryHandler,
-    MessageHandler, ContextTypes, filters,
+
+# =========================================================
+# ⚙️ EASY CONFIGURATION (YAHAN APNA TOKEN AUR ID DALO)
+# =========================================================
+
+BOT_TOKEN = "8848096554:AAEoRQucAIBPV7QkeEMTgvWbjXyB8o48sAQ"   # 👈 Yahan apna Telegram Bot Token daal do
+ADMIN_ID = 6516697207               # 👈 Yahan apni Telegram Numeric ID daal do (Bina quotes ke)
+
+# =========================================================
+# LOGGING & DATABASE SETUP
+# =========================================================
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
 )
+log = logging.getLogger(__name__)
 
-UPI_ID = "xsdevvv889@fam"
-
-
-def generate_upi_qr(amount, order_id):
-    """Generate a UPI QR with this order's exact INR amount."""
-    amount = Decimal(str(amount)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-    if amount <= 0:
-        raise ValueError("Amount must be positive")
-
-    params = {
-        "pa": UPI_ID,
-        "pn": "FLUX SMM",
-        "am": f"{amount:.2f}",
-        "cu": "INR",
-        "tn": f"FLUX SMM Order {order_id}",
-    }
-    upi_link = "upi://pay?" + urlencode(params)
-    qr = qrcode.make(upi_link)
-    image_buffer = io.BytesIO()
-    image_buffer.name = f"flux_smm_order_{order_id}.png"
-    qr.save(image_buffer, format="PNG")
-    image_buffer.seek(0)
-    return image_buffer
-
-# ============================================================
-# FLUX SMM BOT
-# Python + python-telegram-bot 22.x
-#
-# Put BOT_TOKEN and ADMIN_ID in your environment.
-# Edit CONFIG below to change plans, prices, text, images, QR,
-# and support link without changing the main logic.
-# ============================================================
-
-BOT_TOKEN = os.getenv("BOT_TOKEN", "").strip()
-
-ADMIN_RAW = os.getenv("ADMIN_ID", "").strip()
-if not ADMIN_RAW.isdigit():
-    raise RuntimeError("ADMIN_ID is missing or invalid. Set your numeric Telegram user ID.")
-ADMIN_ID = int(ADMIN_RAW)
-
-# Paste your hosted direct image URLs below (or Telegram photo file_ids).
-# Welcome image appears on /start and when users return to the home menu.
-START_IMAGE = "https://ibb.co/7NZLR5SK"
-
-# One image per platform's plan page. These images appear only on the
-# platform selection page, not inside individual service/order screens.
-PLAN_IMAGES = {
-    "instagram": "https://ibb.co/Q7NWhyCp",
-    "facebook": "https://ibb.co/xtjSNYnh",
-    "youtube": "https://ibb.co/q3cg2Sbv",
-    "telegram": "https://ibb.co/PBm8yqP",
-    "freefire": "https://ibb.co/0jYJpK1Z",
-}
-
-# Support link is kept in code, not Railway variables.
-SUPPORT_URL = "https://t.me/xylerigcc"
-
-
-class _ImageMetaParser(HTMLParser):
-    """Find the actual image URL embedded in an ImgBB share page."""
-    def __init__(self):
-        super().__init__()
-        self.image_url = None
-
-    def handle_starttag(self, tag, attrs):
-        if tag.lower() != "meta":
-            return
-        attrs = dict(attrs)
-        key = (attrs.get("property") or attrs.get("name") or "").lower()
-        if key in ("og:image", "twitter:image", "twitter:image:src") and attrs.get("content"):
-            self.image_url = attrs["content"]
-
-def load_hosted_image(url: str):
-    """Download an image from either a direct URL or an ImgBB page URL.
-
-    Telegram cannot use an ImgBB webpage URL directly as a photo, so this
-    fetches the page, reads its og:image metadata, then downloads the image.
-    Returns a Telegram-compatible BytesIO object.
-    """
-    headers = {"User-Agent": "Mozilla/5.0 (compatible; FluxSMMBot/1.0)"}
-    req = Request(url, headers=headers)
-    with urlopen(req, timeout=15) as response:
-        content_type = response.headers.get("Content-Type", "").lower()
-        body = response.read(12 * 1024 * 1024 + 1)
-        final_url = response.geturl()
-    if len(body) > 12 * 1024 * 1024:
-        raise ValueError("Image is larger than 12 MB")
-
-    if content_type.startswith("image/"):
-        image_bytes = body
-    else:
-        parser = _ImageMetaParser()
-        parser.feed(body.decode("utf-8", errors="replace"))
-        if not parser.image_url:
-            raise ValueError("Could not find the actual image in this hosting page")
-        image_url = urljoin(final_url, parser.image_url)
-        image_req = Request(image_url, headers=headers)
-        with urlopen(image_req, timeout=15) as response:
-            image_type = response.headers.get("Content-Type", "").lower()
-            image_bytes = response.read(12 * 1024 * 1024 + 1)
-        if len(image_bytes) > 12 * 1024 * 1024:
-            raise ValueError("Image is larger than 12 MB")
-        if not image_type.startswith("image/"):
-            raise ValueError("ImgBB did not return an image file")
-
-    photo = io.BytesIO(image_bytes)
-    photo.name = "flux_smm_image.jpg"
-    photo.seek(0)
-    return photo
-
-# ---------- Styled text ----------
-def f(text: str) -> str:
-    """Return readable plain text; avoids mangled caption formatting."""
-    return text
-
-def money(value):
-    value = Decimal(str(value))
-    return f"₹{value.quantize(Decimal('0.01'))}"
-
-# ---------- Editable bot content ----------
-START_CAPTION = """🚀 WELCOME TO FLUX SMM
-
-Fast & Affordable Social Media Services
-Instagram • Facebook • YouTube • Telegram
-High Quality • Easy Ordering • Quick Support
-
-Choose a platform below and select a service.
-Prices are shown clearly before payment.
-After payment, send your screenshot and UTR.
-Admin will verify your payment manually.
-Please enter correct details while ordering.
-
-Thank you for choosing FLUX SMM ❤️"""
-
-SERVICE_CAPTION = """🚀 FLUX SMM SERVICE
-
-Select a service below to place your order.
-Choose the quantity you need.
-The bot will calculate your total automatically.
-Then complete payment using the QR code.
-Send your payment screenshot and UTR for approval."""
-
-PAYMENT_TEXT = """💳 PAYMENT DETAILS
-
-Scan the QR code and pay the exact amount shown.
-After payment, send your payment screenshot here.
-Then send your UTR / transaction number.
-Your order will be sent to admin for verification.
-Do not send a fake or edited payment screenshot."""
-
-# service format:
-# {"name": "...", "price": Decimal/string, "unit": "...", "fixed": False}
-# fixed=True means the listed price is the complete package price.
-PLANS = {
-    "instagram": {
-        "name": f("INSTAGRAM"),
-        "services": [
-            {"name": f("LIKES NON DROP"), "price": "20", "unit": "1K", "fixed": False},
-            {"name": f("FOLLOWERS NON DROP"), "price": "34", "unit": "1K", "fixed": False},
-            {"name": f("VIEWS"), "price": "10", "unit": "1K", "fixed": False},
-            {"name": f("COMMENTS"), "price": "23", "unit": "1K", "fixed": False},
-            {"name": f("LIKES (20% DROP)"), "price": "10", "unit": "1K", "fixed": False},
-            {"name": f("FOLLOWERS (20% DROP)"), "price": "19", "unit": "1K", "fixed": False},
-            {"name": f("STORY VIEW & LIKE"), "price": "26", "unit": "1K", "fixed": False},
-        ],
-    },
-    "facebook": {
-        "name": f("FACEBOOK"),
-        "services": [
-            {"name": f("FOLLOWERS DROP"), "price": "20", "unit": "1K", "fixed": False},
-            {"name": f("FOLLOWERS NON DROP"), "price": "34", "unit": "1K", "fixed": False},
-            {"name": f("LIKE DROP"), "price": "10", "unit": "1K", "fixed": False},
-            {"name": f("LIKE NON DROP"), "price": "20", "unit": "1K", "fixed": False},
-            {"name": f("COMMENTS"), "price": "23", "unit": "1K", "fixed": False},
-            {"name": f("VIEWS"), "price": "10", "unit": "1K", "fixed": False},
-        ],
-    },
-    "youtube": {
-        "name": f("YOUTUBE"),
-        "services": [
-            {"name": f("SUBSCRIBERS NO DROP"), "price": "39", "unit": "1K", "fixed": False},
-            {"name": f("SUBSCRIBERS DROP"), "price": "23", "unit": "1K", "fixed": False},
-            {"name": f("LIKES DROP"), "price": "15", "unit": "1K", "fixed": False},
-            {"name": f("LIKES NON DROP"), "price": "24", "unit": "1K", "fixed": False},
-            {"name": f("COMMENTS"), "price": "30", "unit": "1K", "fixed": False},
-            {"name": f("4000 HOURS WATCH TIME"), "price": "99", "unit": "PACKAGE", "fixed": True},
-        ],
-    },
-    "telegram": {
-        "name": f("TELEGRAM"),
-        "services": [
-            {"name": f("CHANNEL MEMBERS NON DROP"), "price": "20", "unit": "1K", "fixed": False},
-            {"name": f("CHANNEL MEMBER DROP"), "price": "10", "unit": "1K", "fixed": False},
-            {"name": f("POST VIEWS"), "price": "25", "unit": "5K", "fixed": False},
-            {"name": f("REACTION (GOOD)"), "price": "20", "unit": "1K", "fixed": False},
-            {"name": f("REACTION (BAD)"), "price": "18", "unit": "1K", "fixed": False},
-        ],
-    },
-    "freefire": {
-        "name": f("FREE FIRE LIKES"),
-        "services": [
-            {"name": f("10K FF LIKES"), "price": "29", "unit": "PACKAGE", "fixed": True},
-            {"name": f("50K FF LIKES"), "price": "67", "unit": "PACKAGE", "fixed": True},
-            {"name": f("100K FF LIKES"), "price": "126", "unit": "PACKAGE", "fixed": True},
-        ],
-    },
-}
-
-# ============================================================
-# Database
-# ============================================================
-DB_PATH = "orders.db"
-
-def db():
-    con = sqlite3.connect(DB_PATH)
-    con.row_factory = sqlite3.Row
-    return con
+DB_PATH = "bot_database.db"
 
 def init_db():
-    con = db()
-    con.execute("""
-        CREATE TABLE IF NOT EXISTS orders (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            username TEXT,
-            plan_key TEXT NOT NULL,
-            service_name TEXT NOT NULL,
-            quantity TEXT,
-            target TEXT,
-            custom_text TEXT,
-            amount TEXT NOT NULL,
-            screenshot_file_id TEXT,
-            utr TEXT,
-            status TEXT NOT NULL DEFAULT 'WAITING_PAYMENT',
-            created_at TEXT NOT NULL
-        )
-    """)
-    con.commit()
-    con.close()
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("CREATE TABLE IF NOT EXISTS users (user_id INTEGER PRIMARY KEY)")
+    cursor.execute("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)")
+    conn.commit()
+    
+    cursor.execute("SELECT value FROM settings WHERE key='current_upi'")
+    if not cursor.fetchone():
+        cursor.execute("INSERT INTO settings (key, value) VALUES ('current_upi', 'haaland78@ybl')")
+        conn.commit()
 
-def create_order(data):
-    con = db()
-    cur = con.execute("""
-        INSERT INTO orders
-        (user_id, username, plan_key, service_name, quantity, target,
-         custom_text, amount, status, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'WAITING_PAYMENT', ?)
-    """, (
-        data["user_id"], data.get("username"), data["plan_key"],
-        data["service_name"], data.get("quantity"), data.get("target"),
-        data.get("custom_text"), str(data["amount"]),
-        datetime.now(timezone.utc).isoformat()
-    ))
-    order_id = cur.lastrowid
-    con.commit()
-    con.close()
-    return order_id
+    cursor.execute("SELECT value FROM settings WHERE key='bot_token'")
+    if not cursor.fetchone():
+        cursor.execute("INSERT INTO settings (key, value) VALUES ('bot_token', ?)", (BOT_TOKEN,))
+        conn.commit()
+    conn.close()
 
-def update_order(order_id, **fields):
-    allowed = {
-        "screenshot_file_id", "utr", "status", "target", "custom_text",
-        "quantity", "amount"
+init_db()
+
+def get_active_token():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT value FROM settings WHERE key='bot_token'")
+    res = cursor.fetchone()
+    conn.close()
+    return res[0] if res else BOT_TOKEN
+
+def set_active_token(new_token):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("UPDATE settings SET value=? WHERE key='bot_token'", (new_token,))
+    conn.commit()
+    conn.close()
+
+CURRENT_TOKEN = get_active_token()
+bot = telebot.TeleBot(CURRENT_TOKEN, parse_mode="HTML")
+
+def get_current_upi():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT value FROM settings WHERE key='current_upi'")
+    res = cursor.fetchone()
+    conn.close()
+    return res[0] if res else "haaland78@ybl"
+
+def set_current_upi(new_upi):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("UPDATE settings SET value=? WHERE key='current_upi'", (new_upi,))
+    conn.commit()
+    conn.close()
+
+def add_user_db(user_id):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("INSERT OR IGNORE INTO users (user_id) VALUES (?)", (user_id,))
+    conn.commit()
+    conn.close()
+
+def get_all_users():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT user_id FROM users")
+    users = [row[0] for row in cursor.fetchall()]
+    conn.close()
+    return users
+
+SUPPORT_LINK = "https://t.me/xylerigcc"
+WELCOME_IMAGE = "https://ibb.co/RGL77cpn"
+START_IMAGE = "https://ibb.co/GhbLV5P"
+
+# =========================================================
+# 10 PLANS (ALL ORIGINAL DEMO URLS RESTORED)
+# =========================================================
+
+PLANS = [
+    {
+        "id": 1,
+        "name": "🔥 Plan 1",
+        "price": "49",
+        "validity": "180 days",
+        "videos": "45000+",
+        "demos": [
+            {"type": "video", "id": "https://videotourl.com/videos/1791609530271-d1845e11-78bd-4465-a0e3-3e0dd57fb424.mp4"},
+            {"type": "video", "id": "https://videotourl.com/videos/1791610410648-c50ab2d2-b1b2-4998-8f5f-43a5f719b603.mp4"},
+            {"type": "video", "id": "https://videotourl.com/videos/1791609652325-1646ca32-e73f-4a5a-9874-a0f4e401c6bb.mp4"},
+            {"type": "video", "id": "https://videotourl.com/videos/1791609624603-358124e2-dbc4-43b2-9772-e18c1df57397.mp4"},
+            {"type": "video", "id": "https://videotourl.com/videos/1791609569957-a7ce2e8a-e185-4dc6-893c-298a2d9c1b4c.mp4"}
+        ],
+        "caption": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍\n4. 𝙉𝙀𝙒 𝙑𝙄𝘿𝙀𝙊𝙎 𝙐𝙋𝙇𝙊𝘼𝘿𝙀𝘿 𝙀𝙑𝙀𝙍𝙔 𝙎𝙐𝙉𝘿𝘼𝙔 ✅",
+        "active": True
+    },
+    {
+        "id": 2,
+        "name": "🔥 Plan 2",
+        "price": "69",
+        "validity": "180 days",
+        "videos": "40000+",
+        "demos": [
+            {"type": "video", "id": "https://videotourl.com/videos/1791598317965-12b2368c-6035-4e43-b708-df28bcd246b6.mp4"},
+            {"type": "video", "id": "https://videotourl.com/videos/1791609986226-0b727823-bf05-42b7-80e8-c949f04b95ab.mp4"},
+            {"type": "video", "id": "https://videotourl.com/videos/1791598333066-6d6fc74f-945c-4641-99d1-d862e59790d4.mp4"},
+            {"type": "video", "id": "https://videotourl.com/videos/1791598348006-882fbe39-db59-4bb7-8636-1c2645fb93c0.mp4"},
+            {"type": "video", "id": "https://videotourl.com/videos/1791611260635-789f7a13-25cd-4204-8ffc-455168319040.mp4"},
+            {"type": "video", "id": "https://videotourl.com/videos/1791598360862-d0ddd962-c4e7-4c98-a860-d360bf6779f8.mp4"},
+            {"type": "video", "id": "https://videotourl.com/videos/1791601968259-cb7b49a5-a8c5-45f9-9156-e08f71b052d0.mp4"},
+            {"type": "video", "id": "https://videotourl.com/videos/1791598382840-4245fa8e-38f8-4737-8bb9-a2b8641a3d0f.mp4"},
+            {"type": "video", "id": "https://videotourl.com/videos/1791598397313-ff9dd5ef-d489-4715-a2ca-a71c8923f162.mp4"}
+        ],
+        "caption": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍\n4. 𝙉𝙀𝙒 𝙑𝙄𝘿𝙀𝙊𝙎 𝙐𝙋𝙇𝙊𝘼𝘿𝙀𝘿 𝙀𝙑𝙀𝙍𝙔 𝙎𝙐𝙉𝘿𝘼𝙔 ✅",
+        "active": True
+    },
+    {
+        "id": 3,
+        "name": "🔥 Plan 3",
+        "price": "49",
+        "validity": "180 days",
+        "videos": "70000+",
+        "demos": [
+            {"type": "video", "id": "https://videotourl.com/videos/1791598226633-9d219b40-bf0b-4774-b493-6449c47d5ef1.mp4"},
+            {"type": "video", "id": "https://videotourl.com/videos/1791598035486-79178a34-a631-49d2-870e-ff3425f1c058.mp4"},
+            {"type": "video", "id": "https://videotourl.com/videos/1791611314862-1e0e5b81-0a04-436a-9749-4f5e9115404f.mp4"},
+            {"type": "video", "id": "https://videotourl.com/videos/1791598059935-f6722923-e315-4b97-aaeb-e7b0af379f2b.mp4"},
+            {"type": "video", "id": "https://videotourl.com/videos/1791598126801-a117ace0-e399-46e6-b697-0d3da6efeedd.mp4"},
+            {"type": "video", "id": "https://videotourl.com/videos/1791598104865-7bca6c3f-db24-465d-9688-d153131af1e5.mp4"},
+            {"type": "video", "id": "https://videotourl.com/videos/1791598207010-15f8101c-d87e-4e83-bd6a-43a333204662.mp4"}
+        ],
+        "caption": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍\n4. 𝙉𝙀𝙒 𝙑𝙄𝘿𝙀𝙊𝙎 𝙐𝙋𝙇𝙊𝘼𝘿𝙀𝘿 𝙀𝙑𝙀𝙍𝙔 𝙎𝙐𝙉𝘿𝘼𝙔 ✅",
+        "active": True
+    },
+    {
+        "id": 4,
+        "name": "🔥 Plan 4",
+        "price": "39",
+        "validity": "180 days",
+        "videos": "56000+",
+        "demos": [
+            {"type": "video", "id": "https://videotourl.com/videos/1791611037316-4db456f2-f82c-4468-9f48-381341ed6e55.mp4"},
+            {"type": "video", "id": "https://videotourl.com/videos/1791611085614-c863517b-d989-4d6f-b6ef-d23db0b73f5a.mp4"},
+            {"type": "video", "id": "https://videotourl.com/videos/1791611220352-ba6538bc-4db1-401e-81f7-88c53824e27f.mp4"},
+            {"type": "video", "id": "https://videotourl.com/videos/1791609479203-02acf86c-6132-4bc2-8041-9f43ab529748.mp4"},
+            {"type": "video", "id": "https://videotourl.com/videos/1791611168222-86d679dd-8a24-46fb-8b06-d59cc97e84c2.mp4"},
+            {"type": "video", "id": "https://videotourl.com/videos/1791611005214-c25159ac-d514-4eff-8061-a25465ff6eba.mp4"}
+        ],
+        "caption": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍\n4. 𝙉𝙀𝙒 𝙑𝙄𝘿𝙀𝙊𝙎 𝙐𝙋𝙇𝙊𝘼𝘿𝙀𝘿 𝙀𝙑𝙀𝙍𝙔 𝙎𝙐𝙉𝘿𝘼𝙔 ✅",
+        "active": True
+    },
+    {
+        "id": 5,
+        "name": "🔥 Plan 5",
+        "price": "49",
+        "validity": "180 days",
+        "videos": "67000+",
+        "demos": [
+            {"type": "video", "id": "https://videotourl.com/videos/1791611423923-36dbbbf3-84c1-4754-a7e4-dc05798eaa03.mp4"},
+            {"type": "video", "id": "https://videotourl.com/videos/1791611350514-052fe889-5ac7-4446-91ef-2f928070e131.mp4"},
+            {"type": "video", "id": "https://videotourl.com/videos/1791609591492-b5b0f616-27c5-436f-9aa9-e70720337677.mp4"},
+            {"type": "video", "id": "https://videotourl.com/videos/1791609952353-7ee9382f-6db6-4c43-86ed-c8f418a3282c.mp4"},
+            {"type": "video", "id": "https://videotourl.com/videos/1791609450717-98fd3d4d-533c-46fc-a290-9f9f937b6721.mp4"}
+        ],
+        "caption": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍\n4. 𝙉𝙀𝙒 𝙑𝙄𝘿𝙀𝙊𝙎 𝙐𝙋𝙇𝙊𝘼𝘿𝙀𝘿 𝙀𝙑𝙀𝙍𝙔 𝙎𝙐𝙉𝘿𝘼𝙔 ✅",
+        "active": True
+    },
+    {
+        "id": 6,
+        "name": "🔥 Plan 6",
+        "price": "49",
+        "validity": "180 days",
+        "videos": "50000+",
+        "demos": [
+            {"type": "video", "id": "https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4"},
+            {"type": "video", "id": "https://videotourl.com/videos/1791607674607-203922d8-e261-4085-90fc-4be2fd62a6fb.mp4"},
+            {"type": "video", "id": "https://videotourl.com/videos/1791607662133-116f8c11-861a-4d4c-94a4-411fbd79a4f4.mp4"},
+            {"type": "video", "id": "https://videotourl.com/videos/1791607553470-a87b7709-29e5-449b-89d2-49ce97c8e367.mp4"},
+            {"type": "video", "id": "https://videotourl.com/videos/1791607607288-b1cc3341-7d49-473e-8544-840992806dab.mp4"},
+            {"type": "video", "id": "https://videotourl.com/videos/1791607585444-8a7d8e39-2917-4d23-949e-c048fcbacb2f.mp4"},
+            {"type": "video", "id": "https://videotourl.com/videos/1791607617748-9c8da0dd-313e-4a4d-862b-7ccf034383b7.mp4"}
+        ],
+        "caption": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍\n4. 𝙉𝙀𝙒 𝙑𝙄𝘿𝙀𝙊𝙎 𝙐𝙋𝙇𝙊𝘼𝘿𝙀𝘿 𝙀𝙑𝙀𝙍𝙔 𝙎𝙐𝙉𝘿𝘼𝙔 ✅",
+        "active": True
+    },
+    {
+        "id": 7,
+        "name": "🔥 Plan 7",
+        "price": "58",
+        "validity": "180 days",
+        "videos": "30000+",
+        "demos": [
+            {"type": "video", "id": "https://videotourl.com/videos/1791609855846-9b6bac98-1fcf-4d60-b612-3e5abaf6be7e.mp4"},
+            {"type": "video", "id": "https://videotourl.com/videos/1791614058029-1220e2df-44c4-467d-bbd7-755af32ada0c.mp4"}
+        ],
+        "caption": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍\n4. 𝙉𝙀𝙒 𝙑𝙄𝘿𝙀𝙊𝙎 𝙐𝙋𝙇𝙊𝘼𝘿𝙀𝘿 𝙀𝙑𝙀𝙍𝙔 𝙎𝙐𝙉𝘿𝘼𝙔 ✅",
+        "active": True
+    },
+    {
+        "id": 8,
+        "name": "🔥 Plan 8",
+        "price": "63",
+        "validity": "180 days",
+        "videos": "70000+",
+        "demos": [
+            {"type": "video", "id": "https://videotourl.com/videos/1791611593469-187437c5-8f84-41c6-afa1-3d61feb9ff72.mp4"},
+            {"type": "video", "id": "https://videotourl.com/videos/1791611552865-c2cf6f7d-1544-4c34-9bdb-5e5fb2092584.mp4"}
+        ],
+        "caption": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍\n4. 𝙉𝙀𝙒 𝙑𝙄𝘿𝙀𝙊𝙎 𝙐𝙋𝙇𝙊𝘼𝘿𝙀𝘿 𝙀𝙑𝙀𝙍𝙔 𝙁𝙍𝙄𝘿𝘼𝙔 ✅.",
+        "active": True
+    },
+    {
+        "id": 9,
+        "name": "🔥 Plan 9",
+        "price": "49",
+        "validity": "180 days",
+        "videos": "18000+",
+        "demos": [
+            {"type": "video", "id": "https://videotourl.com/videos/1791611713436-2f106a4b-9ee1-4d9b-8e06-c30a0fe309e7.mp4"},
+            {"type": "video", "id": "https://videotourl.com/videos/1791611779829-f05b75a9-65c7-441d-ad89-5d5f15301b01.mp4"}
+        ],
+        "caption": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍\n4. 𝙉𝙀𝙒 𝙑𝙄𝘿𝙀𝙊𝙎 𝙐𝙋𝙇𝙊𝘼𝘿𝙀𝘿 𝙀𝙑𝙀𝙍𝙔 𝙎𝙐𝙉𝘿𝘼𝙔 ✅",
+        "active": True
+    },
+    {
+        "id": 10,
+        "name": "𝗔𝗟𝗟 𝗩𝗜𝗣 𝗠𝗘𝗚𝗔 𝗣𝗔𝗖𝗞 🔥",
+        "price": "169",
+        "validity": "180 days",
+        "videos": "100000+",
+        "demos": [],
+        "caption": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍\n4. 𝙉𝙀𝙒 𝙑𝙄𝘿𝙀𝙊𝙎 𝙐𝙋𝙇𝙊𝘼𝘿𝙀𝘿 𝙀𝙑𝙀𝙍𝙔 𝙎𝙐𝙉𝘿𝘼𝙔 ✅",
+        "active": True
     }
-    fields = {k: v for k, v in fields.items() if k in allowed}
-    if not fields:
-        return
-    con = db()
-    sets = ", ".join(f"{k}=?" for k in fields)
-    con.execute(f"UPDATE orders SET {sets} WHERE id=?", (*fields.values(), order_id))
-    con.commit()
-    con.close()
-
-def get_order(order_id):
-    con = db()
-    row = con.execute("SELECT * FROM orders WHERE id=?", (order_id,)).fetchone()
-    con.close()
-    return row
-
-# ============================================================
-# UI helpers
-def button(text, *, callback_data=None, url=None, style="primary"):
-    """Create a styled inline button. Telegram supports primary/blue, success/green, danger/red."""
-    return InlineKeyboardButton(
-        text,
-        callback_data=callback_data,
-        url=url,
-        style=style,
-    )
-
-def back_button(style="primary"):
-    return [button(f("🔙 BACK"), callback_data="home", style=style)]
-
-def main_keyboard():
-    return InlineKeyboardMarkup([
-        [button(f("📸 INSTAGRAM"), callback_data="plan:instagram", style="primary"),
-         button(f("📘 FACEBOOK"), callback_data="plan:facebook", style="success")],
-        [button(f("▶️ YOUTUBE"), callback_data="plan:youtube", style="danger"),
-         button(f("✈️ TELEGRAM"), callback_data="plan:telegram", style="primary")],
-        [button(f("🎮 FREE FIRE LIKES"), callback_data="plan:freefire", style="success")],
-        [button(f("💬 SUPPORT"), url=SUPPORT_URL, style="danger")],
-    ])
-
-def plan_keyboard(plan_key):
-    services = PLANS[plan_key]["services"]
-    styles = ["primary", "success", "danger"]
-    rows = []
-    for i, svc in enumerate(services):
-        rows.append([button(
-            f"{i+1}. {svc['name']} • ₹{svc['price']}/{svc['unit']}",
-            callback_data=f"service:{plan_key}:{i}",
-            style=styles[i % len(styles)],
-        )])
-    rows.append([button(f("🔙 BACK TO PLANS"), callback_data="home", style="primary")])
-    return InlineKeyboardMarkup(rows)
-
-def order_keyboard(order_id):
-    return InlineKeyboardMarkup([
-        [button(f("💳 PAY NOW"), callback_data=f"pay:{order_id}", style="success")],
-        [button(f("❌ CANCEL"), callback_data="home", style="danger")]
-    ])
-
-def admin_keyboard(order_id):
-    return InlineKeyboardMarkup([
-        [button(f("✅ APPROVE"), callback_data=f"admin:approve:{order_id}", style="success")],
-        [button(f("❌ REJECT"), callback_data=f"admin:reject:{order_id}", style="danger")]
-    ])
-
-async def send_start(chat, bot):
-    kb = main_keyboard()
-    if START_IMAGE and not START_IMAGE.startswith(("START_IMAGE_", "PASTE_")):
-        try:
-            photo = await asyncio.to_thread(load_hosted_image, START_IMAGE)
-            await bot.send_photo(chat_id=chat.id, photo=photo,
-                                 caption=START_CAPTION, reply_markup=kb)
-            return
-        except Exception as exc:
-            print(f"Welcome image failed; sending text fallback: {exc!r}")
-    await bot.send_message(chat_id=chat.id, text=START_CAPTION, reply_markup=kb)
-
-# ============================================================
-# Handlers
-# ============================================================
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data.clear()
-    await send_start(update.effective_chat, context.bot)
-
-async def home_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query
-    await q.answer()
-    context.user_data.clear()
-    await send_start(q.message.chat, context.bot)
-
-async def support_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query
-    await q.answer()
-    text = f"""💬 {f("SUPPORT")}
-
-{f("Need help? Contact our support team.")}
-{f("SUPPORT LINK:")} {SUPPORT_URL or "[ADD YOUR SUPPORT LINK IN CONFIG]"}"""
-    await q.edit_message_text(text, reply_markup=InlineKeyboardMarkup([back_button()]))
-
-async def plan_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query
-    await q.answer()
-    _, plan_key = q.data.split(":", 1)
-    plan = PLANS.get(plan_key)
-    if not plan:
-        await q.message.reply_text("Sorry, this platform was not found. Please use /start.")
-        return
-
-    caption = f"""{plan["name"]} 🚀
-
-Select the service you want to order.
-All prices are displayed on the buttons.
-Tap a service to continue."""
-
-    kb = plan_keyboard(plan_key)
-    plan_image = PLAN_IMAGES.get(plan_key, "")
-    if plan_image and not plan_image.startswith(("PASTE_", "PLAN_IMAGE_")):
-        try:
-            # Keep buttons on a text message: Telegram cannot edit a photo as text.
-            photo = await asyncio.to_thread(load_hosted_image, plan_image)
-            await q.message.reply_photo(photo=photo, caption=caption)
-        except Exception as exc:
-            print(f"Plan image failed for {plan_key}; continuing with text menu: {exc!r}")
-    await q.message.reply_text(caption, reply_markup=kb)
-
-async def service_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query
-    await q.answer()
-
-    _, plan_key, idx = q.data.split(":")
-    idx = int(idx)
-    service = PLANS[plan_key]["services"][idx]
-
-    context.user_data["plan_key"] = plan_key
-    context.user_data["service_index"] = idx
-    context.user_data["service_name"] = service["name"]
-    context.user_data["price"] = service["price"]
-    context.user_data["unit"] = service["unit"]
-    context.user_data["fixed"] = service["fixed"]
-
-    # Requested special selector for the 7th Instagram button.
-    # Both options use the listed ₹26/1K price.
-    if plan_key == "instagram" and idx == 6:
-        await q.edit_message_text(
-            f"""{f("SELECT TYPE")}
-
-{f("Choose the comment type you want.")}
-
-{f("RANDOM COMMENTS")} — ₹26/1K
-{f("CUSTOM COMMENTS")} — ₹26/1K""",
-            reply_markup=InlineKeyboardMarkup([
-                [button(
-                    f("💬 RANDOM COMMENTS • ₹26/1K"),
-                    callback_data="comment_type:random",
-                    style="primary"
-                )],
-                [button(
-                    f("✍️ CUSTOM COMMENTS • ₹26/1K"),
-                    callback_data="comment_type:custom",
-                    style="success"
-                )],
-                [button(f("🔙 BACK"), callback_data=f"plan:{plan_key}", style="primary")]
-            ])
-        )
-        return
-
-    if service["fixed"]:
-        amount = Decimal(service["price"])
-        context.user_data["amount"] = str(amount)
-        context.user_data["quantity"] = service["unit"]
-        await q.edit_message_text(
-            f"""{service["name"]}
-
-{f("Package Price:")} {money(amount)}
-
-{f("Tap ORDER NOW to continue.")}""",
-            reply_markup=InlineKeyboardMarkup([
-                [button(f("🛒 ORDER NOW"), callback_data="create:fixed", style="success")],
-                [button(f("🔙 BACK"), callback_data=f"plan:{plan_key}", style="primary")]
-            ])
-        )
-        return
-
-    await q.edit_message_text(
-        f"""{service["name"]}
-
-{f("Price:")} ₹{service["price"]}/{service["unit"]}
-
-{f("Enter the quantity you want.")}
-{f("Example:")} 1000
-{f("Minimum recommended entry: 1000")}""",
-        reply_markup=InlineKeyboardMarkup([back_button()])
-    )
-    context.user_data["state"] = "quantity"
-
-
-async def comment_type_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query
-    await q.answer()
-
-    choice = q.data.split(":")[1]
-    context.user_data["comment_type"] = choice
-    context.user_data["service_name"] = (
-        f("RANDOM COMMENTS") if choice == "random" else f("CUSTOM COMMENTS")
-    )
-    context.user_data["price"] = "26"
-    context.user_data["unit"] = "1K"
-    context.user_data["fixed"] = False
-
-    if choice == "custom":
-        context.user_data["state"] = "custom_text"
-        await q.edit_message_text(
-            f"""{f("CUSTOM COMMENTS")}
-
-{f("Send the comment text you want to use.")}
-
-{f("Example: Great post! 🔥")}
-{f("You can send multiple comments separated by new lines.")}
-
-{f("After that, the bot will ask for quantity.")}""",
-            reply_markup=InlineKeyboardMarkup([back_button()])
-        )
-    else:
-        context.user_data["state"] = "quantity"
-        await q.edit_message_text(
-            f"""{f("RANDOM COMMENTS")}
-
-{f("Price:")} ₹26/1K
-
-{f("Enter the quantity you want.")}
-{f("Example:")} 1000""",
-            reply_markup=InlineKeyboardMarkup([back_button()])
-        )
-
-async def create_fixed_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query
-    await q.answer()
-
-    if "service_name" not in context.user_data:
-        return
-
-    order_data = {
-        "user_id": q.from_user.id,
-        "username": q.from_user.username,
-        "plan_key": context.user_data["plan_key"],
-        "service_name": context.user_data["service_name"],
-        "quantity": context.user_data.get("quantity"),
-        "target": None,
-        "custom_text": None,
-        "amount": Decimal(context.user_data["amount"]),
-    }
-    order_id = create_order(order_data)
-    context.user_data["order_id"] = order_id
-    context.user_data["state"] = "target"
-
-    await q.edit_message_text(
-        f"""{f("ORDER #")}{order_id}
-
-{f("Service:")} {order_data["service_name"]}
-{f("Amount:")} {money(order_data["amount"])}
-
-{"Send your numeric Free Fire Player UID in the next message." if order_data["plan_key"] == "freefire" else "Now send your target/link in the next message."}
-
-{"Example: 12345678901 (Free Fire UID)." if order_data["plan_key"] == "freefire" else "Example: Instagram profile link, YouTube channel link, or Telegram post link."}"""
-    )
-
-async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    state = context.user_data.get("state")
-
-    if state == "quantity":
-        raw = update.message.text.strip().replace(",", "")
-        try:
-            qty = Decimal(raw)
-            if qty <= 0:
-                raise ValueError
-        except (InvalidOperation, ValueError):
-            await update.message.reply_text(f("Please enter a valid quantity, for example 1000."))
-            return
-
-        unit = context.user_data["unit"]
-        # Price is per 1K or per 5K. For 1K: qty/1000.
-        if unit == "1K":
-            multiplier = qty / Decimal("1000")
-        elif unit == "5K":
-            multiplier = qty / Decimal("5000")
-        else:
-            multiplier = Decimal("1")
-
-        amount = Decimal(context.user_data["price"]) * multiplier
-        context.user_data["quantity"] = str(qty)
-        context.user_data["amount"] = str(amount)
-
-        await update.message.reply_text(
-            f"""{f("ORDER SUMMARY")} 🛒
-
-{f("Service:")} {context.user_data["service_name"]}
-{f("Quantity:")} {qty}
-{f("Price:")} ₹{context.user_data["price"]}/{unit}
-{f("Total:")} {money(amount)}
-
-{f("Tap ORDER NOW to continue.")}""",
-            reply_markup=InlineKeyboardMarkup([
-                [button(f("🛒 ORDER NOW"), callback_data="create:variable", style="success")],
-                [button(f("❌ CANCEL"), callback_data="home", style="danger")]
-            ])
-        )
-        context.user_data["state"] = "confirm"
-        return
-
-    if state == "target":
-        order_id = context.user_data.get("order_id")
-        if not order_id:
-            return
-        target = update.message.text.strip()
-        if len(target) < 2:
-            await update.message.reply_text("Please send a valid target, link, or UID.")
-            return
-        current_order = get_order(order_id)
-        if current_order and current_order["plan_key"] == "freefire":
-            if not target.isdigit() or not (5 <= len(target) <= 15):
-                await update.message.reply_text(
-                    "Please send your numeric Free Fire Player UID only (5–15 digits). Do not send your nickname."
-                )
-                return
-
-        update_order(order_id, target=target)
-        context.user_data["state"] = "payment"
-
-        await update.message.reply_text(
-            f"""{f("ORDER #")}{order_id}
-
-{f("Target saved successfully.")}
-
-{f("Now tap PAY NOW to see the QR code and payment instructions.")}""",
-            reply_markup=InlineKeyboardMarkup([
-                [button(f("💳 PAY NOW"), callback_data=f"pay:{order_id}", style="success")],
-                [button(f("❌ CANCEL"), callback_data="home", style="danger")]
-            ])
-        )
-        return
-
-    if state == "custom_text":
-        context.user_data["custom_text"] = update.message.text.strip()
-        context.user_data["state"] = "quantity"
-        await update.message.reply_text(
-            f"""{f("Custom comment text saved.")}
-
-{f("Now enter the quantity.")}
-{f("Example:")} 1000""",
-            reply_markup=InlineKeyboardMarkup([back_button()])
-        )
-        return
-
-    if state == "utr":
-        order_id = context.user_data.get("order_id")
-        if not order_id:
-            await update.message.reply_text(f("No active order found. Use /start."))
-            return
-
-        utr = update.message.text.strip()
-        if len(utr) < 4:
-            await update.message.reply_text(f("Please send a valid UTR / transaction number."))
-            return
-
-        update_order(order_id, utr=utr, status="PENDING_ADMIN")
-        await notify_admin(update, context, order_id)
-
-        context.user_data["state"] = "waiting_admin"
-        await update.message.reply_text(
-            f"""✅ {f("PAYMENT SUBMITTED")}
-
-{f("Order:")} #{order_id}
-{f("UTR received successfully.")}
-{f("Your payment is now waiting for admin approval.")}
-
-{f("Please wait for the approval message.")}"""
-        )
-        return
-
-    await update.message.reply_text(f("Use /start to open FLUX SMM."))
-
-async def create_variable_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query
-    await q.answer()
-
-    order_data = {
-        "user_id": q.from_user.id,
-        "username": q.from_user.username,
-        "plan_key": context.user_data["plan_key"],
-        "service_name": context.user_data["service_name"],
-        "quantity": context.user_data["quantity"],
-        "target": None,
-        "custom_text": context.user_data.get("custom_text"),
-        "amount": Decimal(context.user_data["amount"]),
-    }
-    order_id = create_order(order_data)
-    context.user_data["order_id"] = order_id
-    context.user_data["state"] = "target"
-
-    await q.edit_message_text(
-        f"""🧾 {f("ORDER #")}{order_id}
-
-{f("Service:")} {order_data["service_name"]}
-{f("Quantity:")} {order_data["quantity"]}
-{f("Total:")} {money(order_data["amount"])}
-
-{"Send your numeric Free Fire Player UID in the next message." if order_data["plan_key"] == "freefire" else "Now send your target/link in the next message."}"""
-    )
-
-async def pay_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query
-    await q.answer()
-
+]
+
+STYLE_SERIES = ["danger", "success", "primary", "danger", "success", "primary"]
+
+def button(text, data=None, url=None, style=None):
+    kwargs = {"text": text}
+    if data is not None: kwargs["callback_data"] = data
+    if url is not None: kwargs["url"] = url
+    if style is not None: kwargs["style"] = style
+    return InlineKeyboardButton(**kwargs)
+
+def add_styled(kb, text, data=None, url=None, index=0):
+    style = STYLE_SERIES[index % len(STYLE_SERIES)]
+    kb.add(button(text, data=data, url=url, style=style))
+
+def get_plan(pid):
+    for plan in PLANS:
+        if plan["id"] == pid and plan.get("active"):
+            return plan
+    return None
+
+def generate_upi_qr(upi_id: str, amount: float, payee_name: str = "VIP Access") -> io.BytesIO:
+    upi_url = f"upi://pay?pa={upi_id}&pn={payee_name}&am={amount:.2f}&cu=INR"
+    qr = qrcode.QRCode(box_size=10, border=2)
+    qr.add_data(upi_url)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+    return buf
+
+def generate_txn_id(plan_id: int) -> str:
+    date_str = datetime.datetime.now().strftime("%y%m%d")
+    rand_str = f"{random.randint(1000, 9999)}"
+    return f"TXN-{date_str}-{plan_id}-{rand_str}"
+
+def safe_delete_message(chat_id, message_id):
     try:
-        order_id = int(q.data.split(":")[1])
+        bot.delete_message(chat_id, message_id)
+    except Exception:
+        pass
+
+# =========================================================
+# UI SCREENS (AUTO DELETE PREVIOUS MESSAGES)
+# =========================================================
+
+START_CAPTION = " 𝘽𝙚𝙛𝙤𝙧𝙚 𝙘𝙤𝙣𝙩𝙞𝙣𝙪𝙞𝙣𝙜, 𝙥𝙡𝙚𝙖𝙨𝙚 𝙘𝙤𝙣𝙛𝙞𝙧𝙢 𝙮𝙤𝙪 𝙖𝙧𝙚 18 𝙤𝙧 𝙤𝙡𝙙𝙚𝙧."
+
+def send_start_screen(chat_id, edit_message_id=None):
+    kb = InlineKeyboardMarkup()
+    kb.row(
+        button(" 𝙔𝙀𝙎 𝙄 𝘼𝙈 18+ ✅", data="free", style="success"),
+        button("𝙄 𝘼𝙈 𝙉𝙊𝙏 18+ ❌", data="paid_warning", style="danger")
+    )
+    if edit_message_id:
+        safe_delete_message(chat_id, edit_message_id)
+    try:
+        bot.send_photo(chat_id, START_IMAGE, caption=START_CAPTION, reply_markup=kb)
+    except Exception:
+        bot.send_message(chat_id, START_CAPTION, reply_markup=kb)
+
+def send_paid_screen(chat_id, edit_message_id=None):
+    kb = InlineKeyboardMarkup()
+    add_styled(kb, "🔙 𝘽𝘼𝘾𝙆", data="start", index=2)
+    if edit_message_id:
+        safe_delete_message(chat_id, edit_message_id)
+    bot.send_message(chat_id, " <b>𝙏𝙃𝙄𝙎 𝘽𝙊𝙏 𝙄𝙎 𝙊𝙉𝙇𝙔 𝙁𝙊𝙍 18+ 𝙐𝙎𝙀𝙍𝙎‼️</b>\n\n", reply_markup=kb)
+
+WELCOME_CAPTION = (
+    "<b> 𝙃𝙀𝙔 👋🏻, 𝙒𝙚𝙡𝙘𝙤𝙢𝙚 𝙩𝙤 𝙤𝙪𝙧 𝙫𝙞𝙥 𝙗𝙤𝙩  😍</b> \n\n"
+    "𝙏𝙃𝙄𝙎 𝘽𝙊𝙏 𝘾𝙊𝙉𝘼𝙏𝘼𝙄𝙉 𝙁𝙊𝙇𝙇𝙊𝙒𝙄𝙉𝙂 𝙋𝙇𝘼𝙉𝙎 ✅\n"
+    "𝙎𝙏𝘼𝙍𝙏𝙄𝙉𝙂 𝙋𝙍𝙄𝘾𝙀 𝙄𝙎 𝙅𝙐𝙎𝙏 ₹39 ‼️\n\n"
+    "𝘽𝙀𝙉𝙄𝙁𝙄𝙏𝙎 𝙊𝙐𝙍 𝘽𝙊𝙏 ✅ \n"
+    "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙑𝙄𝘿𝙀𝙊𝙎 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅ \n"
+    "2. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝘿𝙊𝙒𝙉𝙇𝙊𝘼𝘿 𝙁𝙍𝙀𝙀 ✅ \n"
+    "3. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ✅ \n"
+    "4. 𝘿IRECT 𝙒𝘼𝙏𝘾𝙃 𝙑𝙄𝘿𝙀𝙊𝙎 ✅ \n"
+    "<b>𝙏𝙊 𝘽𝙐𝙔 𝙋𝙇𝘼𝙉𝙎 𝘾𝙃𝙀𝘾𝙆 𝘽𝙐𝙏𝙏𝙊𝙉𝙎 𝘽𝙀𝙇𝙊𝙒 𝘼𝙉𝘿 𝘾𝙃𝙀𝘾𝙆 𝘿𝙀𝙈𝙊 𝘼𝙇𝙎𝙊</b> 😍🔥"
+)
+
+def send_home(chat_id, edit_message_id=None):
+    kb = InlineKeyboardMarkup()
+    active_plans = [p for p in PLANS if p.get("active")]
+    for i, p in enumerate(active_plans):
+        add_styled(kb, f" {p['name']} · ₹{p['price']}", data=f"plan:{p['id']}", index=i)
+
+    add_styled(kb, "🎬 𝘿𝙀𝙈𝙊", data="demo_menu", index=0)
+    add_styled(kb, " 𝙎𝙐𝙋𝙋𝙊𝙍𝙏📞", url=SUPPORT_LINK, index=1)
+    
+    if edit_message_id:
+        safe_delete_message(chat_id, edit_message_id)
+    try:
+        bot.send_photo(chat_id, WELCOME_IMAGE, caption=WELCOME_CAPTION, reply_markup=kb)
+    except Exception:
+        bot.send_message(chat_id, WELCOME_CAPTION, reply_markup=kb)
+
+def send_demo_menu(chat_id, edit_message_id=None):
+    kb = InlineKeyboardMarkup()
+    active_plans = [p for p in PLANS if p.get("active")]
+    for i, p in enumerate(active_plans):
+        add_styled(kb, f"🎬 {p['name']}", data=f"demo_plan:{p['id']}", index=i)
+    add_styled(kb, "🔙 𝘽𝘼𝘾𝙆", data="home", index=2)
+    
+    if edit_message_id:
+        safe_delete_message(chat_id, edit_message_id)
+    bot.send_message(chat_id, "🎬 <b>𝘿𝙀𝙈𝙊</b>\n\n𝘿𝙚𝙢𝙤 𝙙𝙚𝙠𝙝𝙣𝙚 𝙠𝙚 𝙡𝙞𝙮𝙚 𝙠𝙤𝙞 𝙥𝙡𝙖𝙣 𝙨𝙚𝙡𝙚𝙘𝙩 𝙠𝙖𝙧𝙤.\n\n👇 <b>𝙎𝙚𝙡𝙚𝙘𝙩 𝙖 𝙥𝙡𝙖𝙣:</b>", reply_markup=kb)
+
+# PLAN DETAILS & MEDIA GROUP DEMO WITH SPOILERS
+def send_plan(chat_id, plan, edit_message_id=None):
+    if edit_message_id:
+        safe_delete_message(chat_id, edit_message_id)
+
+    if plan["id"] == 10:
+        send_payment(chat_id, chat_id, plan)
+        return
+
+    demos = plan.get("demos", [])
+    if demos:
+        media_group = []
+        for media in demos:
+            if media["type"] == "photo":
+                media_group.append(InputMediaPhoto(media["id"], has_spoiler=True))
+            elif media["type"] == "video":
+                media_group.append(InputMediaVideo(media["id"], has_spoiler=True))
+        
+        try:
+            bot.send_media_group(chat_id, media_group)
+            bot.send_message(chat_id, "👆 <b>Click on videos to see demo</b>", parse_mode="HTML")
+        except Exception as e:
+            log.exception(f"Error sending media group: {e}")
+
+    caption = (
+        f"📦 <b>{plan['name']}</b>\n\n"
+        f"💰 <b>𝙋𝙧𝙞𝙘𝙚:</b> ₹{plan['price']}\n"
+        f"⏳ <b>𝙑𝙖𝙡𝙞𝙙𝙞𝙩𝙮:</b> {plan['validity']}\n"
+        f"🎬 <b>𝙑𝙞𝙙𝙚𝙤𝙨:</b> {plan['videos']}\n\n"
+        f"{plan['caption']}"
+    )
+    kb = InlineKeyboardMarkup()
+    kb.row(button("🟢 𝘽𝙐𝙔 𝙉𝙊𝙒 💳", data=f"buy:{plan['id']}", style="success"))
+    kb.row(button("🔵 𝘽𝘼𝘾𝙆 𝙏𝙊 𝙋𝙇𝘼𝙉𝙎", data="home", style="primary"))
+    
+    bot.send_message(chat_id, caption, parse_mode="HTML", reply_markup=kb)
+
+def send_payment(chat_id, user_id, plan, edit_message_id=None):
+    if edit_message_id:
+        safe_delete_message(chat_id, edit_message_id)
+
+    current_upi = get_current_upi()
+    txn_id = generate_txn_id(plan["id"])
+    
+    try:
+        qr_buffer = generate_upi_qr(current_upi, float(plan["price"]))
+        qr_buffer.seek(0)
+    except Exception as e:
+        log.exception(f"QR Error: {e}")
+        bot.send_message(chat_id, "❌ QR code generation error.")
+        return
+
+    kb = InlineKeyboardMarkup()
+    kb.row(button("🟢 𝙄 𝙋𝘼𝙄𝘿 ✅", data=f"paid:{plan['id']}:{txn_id}", style="success"))
+    kb.row(button("🔵 𝘽𝘼𝘾𝙆 ⬅️", data="home", style="primary"))
+
+    caption = (
+        f"💳 <b>𝙋𝘼𝙔𝙈𝙀𝙉𝙏 𝙋𝘼𝙂𝙀</b>\n\n"
+        f"📦 <b>Plan:</b> {plan['name']}\n"
+        f"💰 <b>Amount:</b> ₹{plan['price']}\n"
+        f"🆔 <b>TXN:</b> <code>{txn_id}</code>\n"
+        f"💎 <b>UPI:</b> <code>{current_upi}</code> (tap to copy)\n\n"
+        "1️⃣ Scan QR or copy UPI ID.\n"
+        "2️⃣ Pay exact amount.\n"
+        "3️⃣ Click <b>𝙄 𝙋𝘼𝙄𝘿 ✅</b> & send screenshot."
+    )
+
+    bot.send_photo(chat_id, photo=qr_buffer, caption=caption, parse_mode="HTML", reply_markup=kb)
+    waiting_screenshot.add(user_id)
+    pending_orders[user_id] = {"plan_id": plan["id"], "txn_id": txn_id}
+
+waiting_screenshot = set()
+pending_orders = {}
+
+# =========================================================
+# HANDLERS
+# =========================================================
+
+@bot.message_handler(commands=["start"])
+def start(message):
+    add_user_db(message.from_user.id)
+    send_start_screen(message.chat.id)
+
+@bot.callback_query_handler(func=lambda call: call.data == "free")
+def free_button(call):
+    bot.answer_callback_query(call.id)
+    send_home(call.message.chat.id, edit_message_id=call.message.message_id)
+
+@bot.callback_query_handler(func=lambda call: call.data == "paid_warning")
+def paid_warning_button(call):
+    bot.answer_callback_query(call.id)
+    send_paid_screen(call.message.chat.id, edit_message_id=call.message.message_id)
+
+@bot.callback_query_handler(func=lambda call: call.data == "start")
+def start_back(call):
+    bot.answer_callback_query(call.id)
+    send_start_screen(call.message.chat.id, edit_message_id=call.message.message_id)
+
+@bot.callback_query_handler(func=lambda call: call.data == "home")
+def home_button(call):
+    bot.answer_callback_query(call.id)
+    send_home(call.message.chat.id, edit_message_id=call.message.message_id)
+
+@bot.callback_query_handler(func=lambda call: call.data == "demo_menu")
+def demo_button(call):
+    bot.answer_callback_query(call.id)
+    send_demo_menu(call.message.chat.id, edit_message_id=call.message.message_id)
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("plan:"))
+def plan_button(call):
+    bot.answer_callback_query(call.id)
+    try:
+        plan_id = int(call.data.split(":")[1])
     except Exception:
         return
+    plan = get_plan(plan_id)
+    if plan:
+        send_plan(call.message.chat.id, plan, edit_message_id=call.message.message_id)
 
-    order = get_order(order_id)
-    if not order or order["user_id"] != q.from_user.id:
-        await q.message.reply_text(f("Order not found."))
-        return
-
-    context.user_data["order_id"] = order_id
-    context.user_data["state"] = "screenshot"
-
-    caption = f"""{PAYMENT_TEXT}
-
-🧾 {f("ORDER:")} #{order_id}
-💰 {f("AMOUNT:")} {money(order["amount"])}
-
-{f("After payment, send your payment screenshot here.")}"""
-
-    # Create a fresh QR for the exact saved order amount.
+@bot.callback_query_handler(func=lambda call: call.data.startswith("demo_plan:"))
+def demo_plan_button(call):
+    bot.answer_callback_query(call.id)
     try:
-        qr_image = generate_upi_qr(order["amount"], order_id)
-        await q.message.reply_photo(photo=qr_image, caption=caption)
-    except Exception as exc:
-        print(f"QR generation/send failed for order #{order_id}: {exc!r}")
-        await q.message.reply_text(
-            caption + "\n\n" + f("QR could not be generated. Please contact support."),
-        )
-
-async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if context.user_data.get("state") != "screenshot":
+        plan_id = int(call.data.split(":")[1])
+    except Exception:
         return
+    plan = get_plan(plan_id)
+    if plan:
+        send_plan(call.message.chat.id, plan, edit_message_id=call.message.message_id)
 
-    order_id = context.user_data.get("order_id")
-    if not order_id:
+@bot.callback_query_handler(func=lambda call: call.data.startswith("buy:"))
+def buy_button(call):
+    bot.answer_callback_query(call.id)
+    try:
+        plan_id = int(call.data.split(":")[1])
+    except Exception:
         return
+    plan = get_plan(plan_id)
+    if plan:
+        send_payment(call.message.chat.id, call.from_user.id, plan, edit_message_id=call.message.message_id)
 
-    photo = update.message.photo[-1]
-    update_order(order_id, screenshot_file_id=photo.file_id, status="SCREENSHOT_RECEIVED")
-    context.user_data["state"] = "utr"
+@bot.callback_query_handler(func=lambda call: call.data.startswith("paid:"))
+def paid_confirm(call):
+    bot.answer_callback_query(call.id)
+    try:
+        parts = call.data.split(":")
+        plan_id = int(parts[1])
+    except Exception:
+        return
+    plan = get_plan(plan_id)
+    if not plan:
+        return
+    uid = call.from_user.id
+    waiting_screenshot.add(uid)
+    bot.send_message(call.message.chat.id, "📸 <b>𝙎𝙚𝙣𝙙 𝙮𝙤𝙪𝙧 𝙥𝙖𝙮𝙢𝙚𝙣𝙩 𝙨𝙘𝙧𝙚𝙚𝙣𝙨𝙝𝙤𝙩 𝙖𝙨 𝙖 𝙥𝙝𝙤𝙩𝙤.</b>", parse_mode="HTML")
 
-    await update.message.reply_text(
-        f"""📸 {f("SCREENSHOT RECEIVED")}
+@bot.message_handler(content_types=["photo"])
+def screenshot_handler(message):
+    uid = message.from_user.id
+    if uid not in waiting_screenshot:
+        return
+    
+    order = pending_orders.get(uid, {})
+    plan_id = order.get("plan_id", 1)
+    txn_id = order.get("txn_id", "N/A")
+    plan = get_plan(plan_id)
+    plan_name = plan["name"] if plan else "VIP Plan"
 
-{f("Now send your UTR / transaction number.")}
+    waiting_screenshot.discard(uid)
+    pending_orders.pop(uid, None)
 
-{f("Example: 123456789012")}"""
+    screenshot_id = message.photo[-1].file_id
+
+    admin_kb = InlineKeyboardMarkup()
+    admin_kb.row(
+        button("🟢 APPROVE", callback_data=f"admin_approve:{uid}:{plan_id}:{txn_id}", style="success"),
+        button("🔴 REJECT", callback_data=f"admin_reject:{uid}", style="danger")
     )
 
-async def document_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if context.user_data.get("state") != "screenshot":
-        return
-
-    order_id = context.user_data.get("order_id")
-    if not order_id:
-        return
-
-    doc = update.message.document
-    update_order(order_id, screenshot_file_id=doc.file_id, status="SCREENSHOT_RECEIVED")
-    context.user_data["state"] = "utr"
-
-    await update.message.reply_text(
-        f"""📎 {f("PAYMENT FILE RECEIVED")}
-
-{f("Now send your UTR / transaction number.")}"""
+    bot.send_photo(
+        ADMIN_ID,
+        screenshot_id,
+        caption=(
+            f"📥 <b>NEW PAYMENT PROOF</b>\n\n"
+            f"👤 User: {message.from_user.full_name}\n"
+            f"🆔 User ID: <code>{uid}</code>\n"
+            f"📦 Plan: {plan_name}\n"
+            f"🧾 TXN: <code>{txn_id}</code>"
+        ),
+        parse_mode="HTML",
+        reply_markup=admin_kb
     )
+    bot.send_message(message.chat.id, "✅ Screenshot submitted! Please wait for admin approval.")
 
-async def notify_admin(update, context, order_id):
-    order = get_order(order_id)
-    user = update.effective_user
-
-    caption = f"""🔔 {f("NEW PAYMENT FOR APPROVAL")}
-
-🧾 {f("Order:")} #{order_id}
-👤 {f("User:")} {user.first_name}
-🆔 {f("User ID:")} {user.id}
-🔗 {f("Username:")} @{user.username if user.username else "N/A"}
-
-📦 {f("Service:")} {order["service_name"]}
-🔢 {f("Quantity:")} {order["quantity"] or "-"}
-🎯 {f("Target:")} {order["target"] or "-"}
-💰 {f("Amount:")} {money(order["amount"])}
-🧾 {f("UTR:")} {order["utr"]}
-
-{f("Verify the payment before approving.")}"""
-
-    if order["screenshot_file_id"]:
-        await context.bot.send_photo(
-            chat_id=ADMIN_ID,
-            photo=order["screenshot_file_id"],
-            caption=caption,
-            reply_markup=admin_keyboard(order_id)
-        )
-    else:
-        await context.bot.send_message(
-            chat_id=ADMIN_ID,
-            text=caption,
-            reply_markup=admin_keyboard(order_id)
-        )
-
-async def admin_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query
-
-    if q.from_user.id != ADMIN_ID:
-        await q.answer(f("You are not authorized."), show_alert=True)
+@bot.callback_query_handler(func=lambda call: call.data.startswith("admin_approve:"))
+def handle_admin_approve(call):
+    if call.from_user.id != ADMIN_ID:
+        bot.answer_callback_query(call.id, "Not authorized", show_alert=True)
         return
+    parts = call.data.split(":")
+    user_id = int(parts[1])
+    plan_id = int(parts[2])
+    txn_id = parts[3]
+    plan = get_plan(plan_id)
+    plan_name = plan["name"] if plan else "VIP Plan"
 
-    await q.answer()
-    _, action, order_id_raw = q.data.split(":")
-    order_id = int(order_id_raw)
-    order = get_order(order_id)
+    try:
+        bot.send_message(user_id, f"✅ <b>Payment Approved!</b>\nYour access for {plan_name} is active.", parse_mode="HTML")
+    except Exception:
+        pass
 
-    if not order:
-        await q.message.reply_text(f("Order not found."))
+    screenshot_id = call.message.photo[-1].file_id if call.message.photo else None
+    broadcast_caption = f"🎉 <b>SUCCESSFUL PURCHASE</b> 🎉\n\n📦 Plan: {plan_name}\n🟢 STATUS - UNLOCKED"
+
+    for uid in get_all_users():
+        try:
+            if screenshot_id:
+                bot.send_photo(uid, screenshot_id, caption=broadcast_caption, parse_mode="HTML", reply_markup=get_home_keyboard())
+            else:
+                bot.send_message(uid, broadcast_caption, parse_mode="HTML", reply_markup=get_home_keyboard())
+        except Exception:
+            pass
+
+    bot.edit_message_caption(chat_id=call.message.chat.id, message_id=call.message.message_id, caption=(call.message.caption or "") + "\n\n🟢 <b>APPROVED</b>", parse_mode="HTML")
+    bot.answer_callback_query(call.id, "Approved successfully!")
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("admin_reject:"))
+def handle_admin_reject(call):
+    if call.from_user.id != ADMIN_ID:
+        bot.answer_callback_query(call.id, "Not authorized", show_alert=True)
         return
+    parts = call.data.split(":")
+    user_id = int(parts[1])
+    try:
+        bot.send_message(user_id, "❌ <b>Payment Rejected.</b> Contact support if you think this is a mistake.", parse_mode="HTML")
+    except Exception:
+        pass
+    bot.edit_message_caption(chat_id=call.message.chat.id, message_id=call.message.message_id, caption=(call.message.caption or "") + "\n\n🔴 <b>REJECTED</b>", parse_mode="HTML")
+    bot.answer_callback_query(call.id, "Rejected!")
 
-    if order["status"] not in ("PENDING_ADMIN", "SCREENSHOT_RECEIVED"):
-        await q.answer(f"Order already processed.", show_alert=True)
+def get_home_keyboard():
+    kb = InlineKeyboardMarkup()
+    for p in PLANS:
+        if p.get("active"):
+            kb.add(button(f"{p['name']} · ₹{p['price']}", callback_data=f"plan:{p['id']}"))
+    return kb
+
+# =========================================================
+# ADMIN COMMANDS (/upi, /broadcast, /getid, /changebot)
+# =========================================================
+
+@bot.message_handler(commands=["upi"])
+def cmd_set_upi(message):
+    if message.from_user.id != ADMIN_ID: return
+    msg = bot.send_message(message.chat.id, "✍️ <b>Send the new UPI ID:</b>", parse_mode="HTML")
+    bot.register_next_step_handler(msg, process_new_upi)
+
+def process_new_upi(message):
+    if message.from_user.id != ADMIN_ID: return
+    new_upi = message.text.strip()
+    if "@" not in new_upi:
+        bot.send_message(message.chat.id, "❌ Invalid UPI ID.")
         return
+    set_current_upi(new_upi)
+    bot.send_message(message.chat.id, f"✅ <b>UPI updated to:</b> <code>{new_upi}</code>", parse_mode="HTML")
 
-    if action == "approve":
-        update_order(order_id, status="APPROVED")
-        await context.bot.send_message(
-            chat_id=order["user_id"],
-            text=f"""✅ {f("PAYMENT APPROVED")}
+@bot.message_handler(commands=["changebot"])
+def cmd_change_bot(message):
+    if message.from_user.id != ADMIN_ID: return
+    msg = bot.send_message(message.chat.id, "🔑 <b>Send the new Telegram Bot Token:</b>", parse_mode="HTML")
+    bot.register_next_step_handler(msg, process_new_bot_token)
 
-🧾 {f("Order:")} #{order_id}
-📦 {f("Service:")} {order["service_name"]}
-💰 {f("Amount:")} {money(order["amount"])}
+def process_new_bot_token(message):
+    if message.from_user.id != ADMIN_ID: return
+    new_token = message.text.strip()
+    if ":" not in new_token or len(new_token) < 20:
+        bot.send_message(message.chat.id, "❌ Invalid Bot Token format.")
+        return
+    set_active_token(new_token)
+    bot.send_message(message.chat.id, "✅ <b>Bot Token updated successfully!</b>\nPlease restart your bot for full effect.", parse_mode="HTML")
 
-{f("Your payment has been verified.")}
-{f("Your order is now approved.")}
+@bot.message_handler(commands=["broadcast"])
+def cmd_broadcast(message):
+    if message.from_user.id != ADMIN_ID: return
+    msg = bot.send_message(message.chat.id, "📢 <b>Send message to broadcast:</b>", parse_mode="HTML")
+    bot.register_next_step_handler(msg, process_broadcast)
 
-{f("Thank you for using FLUX SMM 🚀")}"""
-        )
-        await q.edit_message_reply_markup(reply_markup=None)
-        await q.message.reply_text(f"✅ Order #{order_id} approved.")
-    else:
-        update_order(order_id, status="REJECTED")
-        await context.bot.send_message(
-            chat_id=order["user_id"],
-            text=f"""❌ {f("PAYMENT REJECTED")}
+def process_broadcast(message):
+    if message.from_user.id != ADMIN_ID: return
+    sent, failed = 0, 0
+    for uid in get_all_users():
+        try:
+            bot.copy_message(chat_id=uid, from_chat_id=message.chat.id, message_id=message.message_id)
+            sent += 1
+        except Exception:
+            failed += 1
+    bot.send_message(message.chat.id, f"✅ <b>Broadcast complete.</b>\nSent: {sent}\nFailed: {failed}", parse_mode="HTML")
 
-🧾 {f("Order:")} #{order_id}
+@bot.message_handler(commands=["getid"])
+def cmd_get_id(message):
+    if message.from_user.id != ADMIN_ID: return
+    msg = bot.send_message(message.chat.id, "📹 Send any Photo or Video to get its File ID:")
+    bot.register_next_step_handler(msg, process_get_id)
 
-{f("The submitted payment could not be approved.")}
-{f("Please contact support if you believe this is a mistake.")}
+def process_get_id(message):
+    if message.from_user.id != ADMIN_ID: return
+    if message.photo:
+        fid = message.photo[-1].file_id
+        bot.send_message(message.chat.id, f"🖼 Photo File ID:\n<code>{fid}</code>", parse_mode="HTML")
+    elif message.video:
+        fid = message.video.file_id
+        bot.send_message(message.chat.id, f"🎥 Video File ID:\n<code>{fid}</code>", parse_mode="HTML")
 
-{f("Order remains unfulfilled until payment is verified.")}"""
-        )
-        await q.edit_message_reply_markup(reply_markup=None)
-        await q.message.reply_text(f"❌ Order #{order_id} rejected.")
-
-# ============================================================
-# Main
-# ============================================================
-def main():
-    if not BOT_TOKEN:
-        raise RuntimeError(
-            "BOT_TOKEN is missing. Set it as an environment variable before running."
-        )
-
-    init_db()
-
-    app = Application.builder().token(BOT_TOKEN).build()
-
-    app.add_handler(CommandHandler("start", start))
-
-    app.add_handler(CallbackQueryHandler(home_callback, pattern=r"^home$"))
-    app.add_handler(CallbackQueryHandler(support_callback, pattern=r"^support$"))
-    app.add_handler(CallbackQueryHandler(plan_callback, pattern=r"^plan:"))
-    app.add_handler(CallbackQueryHandler(service_callback, pattern=r"^service:"))
-    app.add_handler(CallbackQueryHandler(comment_type_callback, pattern=r"^comment_type:(random|custom)$"))
-    app.add_handler(CallbackQueryHandler(create_fixed_order, pattern=r"^create:fixed$"))
-    app.add_handler(CallbackQueryHandler(create_variable_order, pattern=r"^create:variable$"))
-    app.add_handler(CallbackQueryHandler(pay_callback, pattern=r"^pay:\d+$"))
-    app.add_handler(CallbackQueryHandler(admin_action, pattern=r"^admin:(approve|reject):\d+$"))
-
-    app.add_handler(MessageHandler(filters.PHOTO, photo_handler))
-    app.add_handler(MessageHandler(filters.Document.ALL, document_handler))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_handler))
-
-    print("FLUX SMM bot is starting. Ensure only ONE running instance uses this BOT_TOKEN.")
-    app.run_polling(allowed_updates=Update.ALL_TYPES, drop_pending_updates=False)
+# =========================================================
+# POLLING
+# =========================================================
 
 if __name__ == "__main__":
-    main()
+    log.info("🚀 Bot is starting...")
+    bot.infinity_polling()
