@@ -422,36 +422,55 @@ def send_payment(chat_id, user_id, plan, edit_message_id=None):
 
     current_upi = get_current_upi()
     txn_id = generate_txn_id(plan["id"])
-    
-    try:
-        qr_buffer = generate_upi_qr(current_upi, float(plan["price"]))
-        qr_buffer.seek(0)
-    except Exception as e:
-        log.exception(f"QR Error: {e}")
-        bot.send_message(chat_id, "❌ QR code generation error.")
-        return
+    qr_buffer = generate_upi_qr(current_upi, float(plan["price"]))
+    qr_buffer.seek(0)
 
     kb = InlineKeyboardMarkup()
     kb.row(button("🟢 𝙄 𝙋𝘼𝙄𝘿 ✅", data=f"paid:{plan['id']}:{txn_id}", style="success"))
-    kb.row(button("🔵 𝘽𝘼𝘾𝙆 ⬅️", data="home", style="primary"))
+    kb.row(button("🔵 𝘽𝘼𝘾𝙆", data="home", style="primary"))
 
     caption = (
-        f"💳 <b>𝙋𝘼𝙔𝙈𝙀𝙉𝙏 𝙋𝘼𝙂𝙀</b>\n\n"
-        f"📦 <b>Plan:</b> {plan['name']}\n"
-        f"💰 <b>Amount:</b> ₹{plan['price']}\n"
-        f"🆔 <b>TXN:</b> <code>{txn_id}</code>\n"
-        f"💎 <b>UPI:</b> <code>{current_upi}</code> (tap to copy)\n\n"
-        "1️⃣ Scan QR or copy UPI ID.\n"
-        "2️⃣ Pay exact amount.\n"
-        "3️⃣ Click <b>𝙄 𝙋𝘼𝙄𝘿 ✅</b> & send screenshot."
+        f"💳 <b>PAYMENT PAGE</b>\n\n"
+        f"📦 Plan: {plan['name']}\n"
+        f"💰 Amount: ₹{plan['price']}\n"
+        f"🆔 TXN: <code>{txn_id}</code>\n"
+        f"💎 UPI: <code>{current_upi}</code>"
+    )
+    bot.send_photo(chat_id, photo=qr_buffer, caption=caption, parse_mode="HTML", reply_markup=kb)
+    
+    # Database mein save kar diya taaki restart par bhi data na ude
+    set_pending_order(user_id, plan["id"], txn_id)
+
+@bot.message_handler(content_types=["photo"])
+def screenshot_handler(message):
+    uid = message.from_user.id
+    order = get_pending_order(uid)
+    if not order:
+        return  # Agar user ka koi order pending nahi hai toh ignore karo
+    
+    plan_id, txn_id = order
+    plan = get_plan(plan_id)
+    plan_name = plan["name"] if plan else "VIP Plan"
+
+    # Order clear kar do taaki dobara same screenshot na use ho
+    clear_pending_order(uid)
+
+    screenshot_id = message.photo[-1].file_id
+
+    admin_kb = InlineKeyboardMarkup()
+    admin_kb.row(
+        button("🟢 APPROVE", callback_data=f"admin_approve:{uid}:{plan_id}:{txn_id}", style="success"),
+        button("🔴 REJECT", callback_data=f"admin_reject:{uid}", style="danger")
     )
 
-    bot.send_photo(chat_id, photo=qr_buffer, caption=caption, parse_mode="HTML", reply_markup=kb)
-    waiting_screenshot.add(user_id)
-    pending_orders[user_id] = {"plan_id": plan["id"], "txn_id": txn_id}
-
-waiting_screenshot = set()
-pending_orders = {}
+    bot.send_photo(
+        ADMIN_ID,
+        screenshot_id,
+        caption=f"📥 <b>NEW PAYMENT PROOF</b>\n\n👤 User: {message.from_user.full_name}\n🆔 User ID: <code>{uid}</code>\n📦 Plan: {plan_name}\n🧾 TXN: <code>{txn_id}</code>",
+        parse_mode="HTML",
+        reply_markup=admin_kb
+    )
+    bot.send_message(message.chat.id, "✅ Screenshot submitted! Please wait for admin approval.")
 
 # =========================================================
 # HANDLERS
