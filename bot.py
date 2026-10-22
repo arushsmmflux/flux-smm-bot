@@ -12,9 +12,8 @@ import qrcode
 # ⚙️ EASY CONFIGURATION (YAHAN APNA TOKEN AUR ID DALO)
 # =========================================================
 
-BOT_TOKEN = "8848096554:AAGO-JgELGnyTdPyw8ssds7fCUoImNmNnSo"   # 👈 Yahan apna Telegram Bot Token daal do
-ADMIN_ID = 6516697207                # 👈 Yahan apni Telegram Numeric ID daal do (Bina quotes ke)
-
+BOT_TOKEN = "8848096554:AAGO-JgELGnyTdPyw8ssds7fCUoImNmNnSo"
+ADMIN_ID = 6516697207
 # =========================================================
 # LOGGING & DATABASE SETUP
 # =========================================================
