@@ -462,8 +462,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     keyboard = [
         [
-            InlineKeyboardButton("𝙔ES 𝙄 𝘼𝙈 18+ ✅", callback_data="start"),
-            InlineKeyboardButton("𝙄 𝘼𝙈 𝙉𝙊𝙏 18+ ❌", callback_data="exit")
+            InlineKeyboardButton("𝙔𝙀𝙎 𝙄 𝘼𝙈 18+ ✅", callback_data="start", style="success"),
+            InlineKeyboardButton("𝙄 𝘼𝙈 𝙉𝙊𝙏 18+ ❌", callback_data="exit", style="danger")
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -514,16 +514,44 @@ def make_button(text, callback_data=None, url=None, style="primary"):
 async def send_main_welcome(chat_id: int, context: ContextTypes.DEFAULT_TYPE):
     keyboard = []
 
+    # ALL PLANS FIRST
     for plan_key, plan in PLAN.items():
-        if plan_key.startswith("plan_vc_"):
-            continue
         btn_text = f"{plan['name']} | ₹{plan['price']}"
-        keyboard.append([make_button(btn_text, callback_data=f"plan_detail_{plan_key}", style="danger")])
 
-    keyboard.append([make_button("🎙️ VC PLANS", callback_data="vc_main_menu", style="success")])
-    keyboard.append([make_button("🎬 𝗗𝗘𝗠𝗢", callback_data="main_demo_menu", style="success")])
-    keyboard.append([make_button("𝗣𝗥𝗢𝗢𝗙 𝗖𝗛𝗔𝗡𝗡𝗘𝗟", url=PROOF_URL, style="primary")])
-    keyboard.append([make_button("𝗦𝗨𝗣𝗣𝗢𝗥𝗧 📞", url=SUPPORT_URL, style="success")])
+        keyboard.append([
+            make_button(
+                btn_text,
+                callback_data=f"plan_detail_{plan_key}",
+                style="danger"
+            )
+        ])
+
+    # DEMO - AFTER ALL PLANS
+    keyboard.append([
+    make_button(
+        "🎬 𝗗𝗘𝗠𝗢",
+        callback_data="main_demo_menu",
+        style="success"
+    )
+])
+
+    # PROOF CHANNEL
+    keyboard.append([
+        make_button(
+            "𝗣𝗥𝗢𝗢𝗙 𝗖𝗛𝗔𝗡𝗡𝗘𝗟",
+            url=PROOF_URL,
+            style="primary"
+        )
+    ])
+
+    # SUPPORT - LAST
+    keyboard.append([
+        make_button(
+            "𝗦𝗨𝗣𝗣𝗢𝗥𝗧 📞",
+            url=SUPPORT_URL,
+            style="success"
+        )
+    ])
 
     reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -537,7 +565,30 @@ async def send_main_welcome(chat_id: int, context: ContextTypes.DEFAULT_TYPE):
         )
     except Exception:
         logger.exception("WELCOME PHOTO ERROR")
-        await context.bot.send_message(chat_id=chat_id, text=WELCOME_CAPTION, reply_markup=reply_markup, parse_mode="HTML")
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text=WELCOME_CAPTION,
+            reply_markup=reply_markup,
+            parse_mode="HTML"
+        )
+
+    except Exception:
+        logger.exception("WELCOME PHOTO ERROR")
+
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text=WELCOME_CAPTION,
+            reply_markup=reply_markup,
+            parse_mode="HTML"
+        )
+    except Exception:
+        logger.exception("WELCOME PHOTO ERROR")
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text=WELCOME_CAPTION,
+            reply_markup=reply_markup,
+            parse_mode="HTML"
+        )
 
 async def vc_main_menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
