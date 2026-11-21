@@ -1530,12 +1530,23 @@ def main():
     application.add_handler(CallbackQueryHandler(handle_admin_callbacks, pattern="^adm_"))
 
     # Case-insensitive DEMO / demo / Demo keyword handler
-    application.add_handler(MessageHandler(filters.Regex(r"(?i)^demo$") & ~filters.COMMAND, handle_demo_text_trigger))
-
-    application.add_handler(MessageHandler(filters.PHOTO & ~filters.COMMAND, handle_screenshot_upload))
     application.add_handler(
         MessageHandler(
-            (filters.TEXT | filters.PHOTO | filters.VIDEO | filters.DOCUMENT) & ~filters.COMMAND & filters.User(user_id=ADMIN_IDS),
+            filters.PHOTO & ~filters.COMMAND,
+            handle_screenshot_upload
+        )
+    )
+
+    application.add_handler(
+        MessageHandler(
+            (
+                filters.TEXT
+                | filters.PHOTO
+                | filters.VIDEO
+                | filters.ATTACHMENT
+            )
+            & ~filters.COMMAND
+            & filters.User(user_id=ADMIN_IDS),
             handle_admin_text_inputs
         )
     )
