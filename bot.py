@@ -57,11 +57,11 @@ DEFAULT_RATING_MSG = (
 PLANS_DATA = {
     "plan_1": {
         "id": 1,
-        "name": "Ultimate Masterclass Pack 1",
+        "name": "𝗜𝗡𝗦𝗧𝗚𝗥𝗔𝗠 𝗠𝗠𝗦 𝗔𝗟𝗟 😍🔥",
         "number_of_videos": "50000+",
-        "price": 49,
+        "price": 50,
         "validity": "180 days",
-        "image_url": "https://i.ibb.co/Fb6S1mYg/course1.jpg",
+        "image_url": "https://i.ibb.co/Fb6S1mYg",
         "description": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍\n4. 𝙉𝙀𝙒 𝙑𝙄𝘿𝙀𝙊𝙎 𝙐𝙋𝙇𝙊𝘼𝘿𝙀𝘿 𝙀𝙑𝙀𝙍𝙔 𝙎𝙐𝙉𝘿𝘼𝙔 ✅",
         "demo_videos": [
             "https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4",
