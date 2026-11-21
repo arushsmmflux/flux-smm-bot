@@ -210,7 +210,7 @@ PLANS_DATA = {
     },
     "plan_10": {
         "id": 10,
-        "name": "INSTAGRAM Pack 10",
+        "name": "𝗪𝗛𝗢𝗥𝗘 𝗣𝗢𝗥!𝗡 ( 𝗥@𝗡𝗗𝗜 ) ❤️🔥",
         "number_of_videos": "50000+",
         "price": 40,
         "validity": "180 days",
@@ -223,7 +223,7 @@ PLANS_DATA = {
     },
     "plan_11": {
         "id": 11,
-        "name": "INSTAGRAM Pack 11",
+        "name": "𝗧𝗥𝗔𝗡𝗦 𝗚𝗜𝗥𝗟 🥵🔥",
         "number_of_videos": "50000+",
         "price": 40,
         "validity": "180 days",
@@ -236,7 +236,7 @@ PLANS_DATA = {
     },
     "plan_12": {
         "id": 12,
-        "name": "INSTAGRAM Pack 12",
+        "name": "𝗚𝗔𝗬 🔥💦",
         "number_of_videos": "50000+",
         "price": 40,
         "validity": "180 days",
@@ -249,7 +249,7 @@ PLANS_DATA = {
     },
     "plan_13": {
         "id": 13,
-        "name": "INSTAGRAM Pack 13",
+        "name": "𝗣𝗨𝗥𝗘 𝗜𝗡𝗗𝗜𝗔𝗡 𝗗𝗘𝗦𝗜 🥵🔥",
         "number_of_videos": "50000+",
         "price": 40,
         "validity": "180 days",
@@ -262,7 +262,7 @@ PLANS_DATA = {
     },
     "plan_14": {
         "id": 14,
-        "name": "INSTAGRAM Pack 14",
+        "name": "𝗔𝗥𝗔𝗕 𝗚𝗜𝗥𝗟 ( 𝗛𝗜𝗝𝗔𝗕 🥵)",
         "number_of_videos": "50000+",
         "price": 40,
         "validity": "180 days",
@@ -275,7 +275,7 @@ PLANS_DATA = {
     },
     "plan_15": {
         "id": 15,
-        "name": "INSTAGRAM Pack 15",
+        "name": "𝗕𝗜𝗚 𝗖𝗢#𝗖𝗞 𝗠𝗘𝗡 💦👀",
         "number_of_videos": "50000+",
         "price": 40,
         "validity": "180 days",
@@ -288,7 +288,7 @@ PLANS_DATA = {
     },
     "plan_16": {
         "id": 16,
-        "name": "art",
+        "name": "𝗕𝗜𝗚 𝗕𝗢𝗢𝗧𝗬 𝗚𝗜𝗥𝗟 🥵💦",
         "number_of_videos": "58000+",
         "price": 40,
         "validity": "180 days",
@@ -301,7 +301,7 @@ PLANS_DATA = {
     },
     "plan_17": {
         "id": 17,
-        "name": "INSTAGRAM Pack 17",
+        "name": "𝗥𝗘𝗔𝗟 𝗙𝗔𝗜𝗠𝗜𝗟𝗬 👀🔥",
         "number_of_videos": "50000+",
         "price": 40,
         "validity": "180 days",
@@ -314,7 +314,7 @@ PLANS_DATA = {
     },
     "plan_18": {
         "id": 18,
-        "name": "Multiple Plan Bundle (Any 4)",
+        "name": "𝗔𝗡𝗬 𝗙𝗢𝗨𝗥 𝗣𝗔𝗖𝗞 𝗜𝗡 120 ‼️🔥)",
         "number_of_videos": "60",
         "price": 120,
         "validity": "180 days",
@@ -325,7 +325,7 @@ PLANS_DATA = {
     },
     "plan_19": {
         "id": 19,
-        "name": "Direct Access Link",
+        "name": "𝗣𝗔𝗜𝗗 𝗩𝗜𝗗𝗘𝗢 𝗖𝗔𝗟𝗟 🥵🔥",
         "number_of_videos": "1",
         "price": 50,
         "validity": "180 days",
