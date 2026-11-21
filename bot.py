@@ -1,15 +1,17 @@
 import os
+import time
 import logging
+import random
 import sqlite3
 import io
-from telegram.ext import CallbackQueryHandler
+import qrcode
 from datetime import datetime
+import pytz
 from telegram import (
     Update,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     InputMediaPhoto,
-    InputMediaVideo
 )
 from telegram.ext import (
     Application,
@@ -17,991 +19,1530 @@ from telegram.ext import (
     CallbackQueryHandler,
     MessageHandler,
     ContextTypes,
-    filters
-)
-import qrcode
-
-# ==========================================
-# CONFIGURATION SECTION (Fully Editable)
-# ==========================================
-BOT_TOKEN = os.getenv("BOT_TOKEN", "YOUR_BOT_TOKEN")
-ADMIN_IDS = [int(x.strip()) for x in os.getenv("ADMIN_IDS", "123456789").split(",") if x.strip().isdigit()]
-
-UPI_ID = os.getenv("UPI_ID", "haaland78@ybl")
-PAYEE_NAME = os.getenv("PAYEE_NAME", "Social Flux")
-
-PROOF_URL = "https://t.me/fluxproofs"
-SUPPORT_URL = "https://t.me/fluxsupport"
-
-START_IMAGE_URL = "https://ibb.co/GhbLV5P"
-START_CAPTION = (
-    "✨ <b>𝘽𝙚𝙛𝙤𝙧𝙚 𝙘𝙤𝙣𝙩𝙞𝙣𝙪𝙞𝙣𝙜, 𝙥𝙡𝙚𝙖𝙨𝙚 𝙘𝙤𝙣𝙛𝙞𝙧𝙢 𝙮𝙤𝙪 𝙖𝙧𝙚 18 𝙤𝙧 𝙤𝙡𝙙𝙚𝙧</b> \n\n"
-)
-WELCOME_IMAGE_URL = "https://ibb.co/RGL77cpn"
-WELCOME_CAPTION = (
-   "<b> 𝙃𝙀𝙔 👋🏻, 𝙒𝙚𝙡𝙘𝙤𝙢𝙚 𝙩𝙤 𝙤𝙪𝙧 𝙫𝙞𝙥 𝙗𝙤𝙩  😍</b> \n\n"
-"𝙏𝙃𝙄𝙎 𝘽𝙊𝙏 𝘾𝙊𝙉𝘼𝙏𝘼𝙄𝙉 𝙁𝙊𝙇𝙇𝙊𝙒𝙄𝙉𝙂 𝙋𝙇𝘼𝙉𝙎 ✅\n" 
-"𝙎𝙏𝘼𝙍𝙏𝙄𝙉𝙂 𝙋𝙍𝙄𝘾𝙀 𝙄𝙎 𝙅𝙐𝙎𝙏 ₹39 ‼️\n\n"
-"| 🔥𝘾𝙃𝙄!𝙇𝘿 𝙑𝙄𝘿𝙀𝙊𝙎 ( 𝘾𝙋 ) ( 𝘾𝙃𝙊𝙏𝙀 𝘽𝘼𝘾𝘾𝙃𝙀 ) \n" 
-"| 🔥𝘽𝙃𝘼𝘽𝙃𝙄 𝙑𝙄𝘿𝙀0𝙎 \n" 
-"| 🔥𝙈0𝙈 𝘼𝙉𝘿 𝙎𝙊#𝙉 \n" 
-"| 🔥𝙍!@𝙋𝙀 𝙑𝙄𝘿𝙀0𝙎\n" 
-"| 🔥𝘽𝘼#𝙋 𝘽𝙀𝙏𝙄 \n" 
-"| 🔥𝗜𝗡𝗦𝗧𝗚𝗥𝗔𝗠 𝗠𝗠#𝗦 𝗔𝗟𝗟 \n"  
-"| 🔥𝙂𝙄𝙍𝙇𝙎 𝙒𝙄𝙏𝙃 𝘼𝙉𝙄𝙈!𝘼𝙇 \n" 
-"| 🔥 𝙈𝙄𝙓 𝙂𝙍𝙊𝙐𝙋 70𝙆 𝙑𝙄𝘿𝙀𝙊 \n" 
-"| 🔥𝘽𝙃𝘼𝙄 𝘽𝙀𝙃𝘼𝙉 \n" 
-"| 🔥𝗔𝗟𝗟 𝗩𝗜𝗣  𝗠𝗘𝗚𝗔 𝗣𝗔𝗖𝗞 \n\n"
-"𝘽𝙀𝙉𝙄𝙁𝙄𝙏𝙎 𝙊𝙁 𝙊𝙐𝙍 𝘽𝙊𝙏 ✅ \n" 
-"1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙑𝙄𝘿𝙀𝙊𝙎 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅ \n" 
-"2. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝘿𝙊𝙒𝙉𝙇𝙊𝘼𝘿 𝙁𝙍𝙀𝙀 ✅ \n" 
-"3. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ✅ \n" 
-"4. 𝘿𝙄𝙍𝙀𝘾𝙏 𝙒𝘼𝙏𝘾𝙃 𝙑𝙄𝘿𝙀𝙊𝙎 ✅ \n" 
-"<b>𝙏𝙊 𝘽𝙐𝙔 𝙋𝙇𝘼𝙉𝙎 𝘾𝙃𝙀𝘾𝙇 𝘽𝙐𝙏𝙏𝙊𝙉𝙎 𝘽𝙀𝙇𝙊𝙒 𝘼𝙉𝘿 𝘾𝙃𝙀𝘾𝙆 𝘿𝙀𝙈𝙊 𝘼𝙇𝙎𝙊</b> 😍🔥"
+    filters,
 )
 
-SHARED_CAPTION_TEMPLATE = (
-    "📦 <b>𝙋𝙡𝙖𝙣:</b> {plan_name}\n"
-    "🎬 <b>𝙑𝙞𝙙𝙚𝙤𝙨:</b> {number_of_videos}\n"
-    "💰 <b>𝙋𝙧𝙞𝙘𝙚:</b> ₹{price}\n\n"
-    "⏳ <b>𝙑𝙖𝙡𝙞𝙙𝙞𝙩𝙮:</b> {validity}\n"
-    "⚡ <b>𝘼𝙘𝙘𝙚𝙨𝙨 𝙏𝙞𝙢𝙚:</b> Instant Delivery ✅\n\n"
-    "<b>𝘿𝙚𝙨𝙘𝙧𝙞𝙥𝙩𝙞𝙤𝙣:</b>\n{description}"
+# Enable logging
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+)
+logger = logging.getLogger(__name__)
+
+# --- CONFIGURATION & ENVIRONMENT VARIABLES ---
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
+ADMIN_IDS_RAW = os.environ.get("ADMIN_IDS", "")
+ADMIN_IDS = [int(x.strip()) for x in ADMIN_IDS_RAW.split(",") if x.strip().isdigit()]
+
+if not BOT_TOKEN or not ADMIN_IDS:
+    logger.warning("WARNING: BOT_TOKEN or ADMIN_IDS environment variables are not set properly!")
+
+IST = pytz.timezone("Asia/Kolkata")
+PROMO_COOLDOWN_SECONDS = 600  # 10 minutes
+
+# --- PLACEHOLDER URLS & CONFIGURATIONS ---
+START_IMAGE = "https://ibb.co/Fb6S1mYg"
+MAIN_WELCOME_IMAGE = "https://ibb.co/Fb6S1mYg"
+DEFAULT_UPI = "haaland78@ybl"
+DEFAULT_PROOF_URL = "https://t.me/placeholder_proof"
+DEFAULT_SUPPORT_URL = "https://t.me/placeholder_support"
+DEFAULT_RATING_MSG = (
+    "🌟 **Why Trust Us? / हमारी विश्वसनीयता**\n\n"
+    "1. **Verified Deliveries:** Over 10,000+ successful digital product deliveries.\n\n"
+    "2. **Instant Support:** Our support team is active 24/7 to resolve any issues.\n\n"
+    "3. **Secure Payments:** Direct UPI verification with strict safety protocols.\n\n"
+    "4. **Transparent Proofs:** Check our proof channel for real customer reviews!"
 )
 
-# Configurable VC & Contact Placeholders
-VC_WHATSAPP_NUMBER = os.getenv("VC_WHATSAPP_NUMBER", "919876543210")
-VC_TELEGRAM_USERNAME = os.getenv("VC_TELEGRAM_USERNAME", "your_telegram_username")
-
-# ==========================================
-# PLANS CONFIGURATION (Exactly 24 Full Plan Slots)
-# ==========================================
-PLAN = {
+# --- PLANS CONFIGURATION (EDIT NAME, PRICE, DEMOS, LINKS HERE) ---
+PLANS_DATA = {
     "plan_1": {
         "id": "plan_1",
-        "name": " 𝗜𝗡𝗦𝗧𝗚𝗥𝗔𝗠 𝗠𝗠𝗦 𝗔𝗟𝗟 😍🔥",
+        "name": "INSTAGRAM Pack 1",
         "number_of_videos": "50000+",
-        "price": 50,
+        "price": 40,
         "validity": "180 days",
         "image_url": "https://ibb.co/Fb6S1mYg",
-        "description": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍\n4. 𝙉𝙀𝙒 𝙑𝙄𝘿𝙀𝙊𝙎 𝙐𝙋𝙇𝙊𝘼𝘿𝙀𝘿 𝙀𝙑𝙀𝙍𝙔 𝙎𝙐𝙉𝘿𝘼𝙔 ✅",
+        "description": "1. YOU CAN SAVE IN GALLERY ✅\n2. NO ANY ADS ❌\n3. HIGH QUALITY VIDEOS 😍\n4. NEW VIDEOS UPLOADED EVERY SUNDAY ✅\n5. High quality and new videos best in telegram",
         "demo_videos": [
             "https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4",
-            "https://videotourl.com/videos/1791607674607-203922d8-e261-4085-90fc-4be2fd62a6fb.mp4",
-            "https://videotourl.com/videos/1791607662133-116f8c11-861a-4d4c-94a4-411fbd79a4f4.mp4",
-            "https://videotourl.com/videos/1791607553470-a87b7709-29e5-449b-89d2-49ce97c8e367.mp4",
-            "https://videotourl.com/videos/1791607607288-b1cc3341-7d49-473e-8544-840992806dab.mp4",
-            "https://videotourl.com/videos/1791607617748-9c8da0dd-313e-4a4d-862b-7ccf034383b7.mp4"
-        ]
+            "https://videotourl.com/videos/1791607674607-203922d8-e261-4085-90fc-4be2fd62a6fb.mp4"
+        ],
+        "delivery_link": "https://t.me/+delivery_link_1"
     },
     "plan_2": {
         "id": "plan_2",
-        "name": "𝙈𝙊𝙈 𝘼𝙉𝘿 𝙎𝙊𝙉 😍🔥",
-        "number_of_videos": "45000+",
-        "price": 50,
+        "name": "INSTAGRAM Pack 2",
+        "number_of_videos": "50000+",
+        "price": 40,
         "validity": "180 days",
-        "image_url": "https://ibb.co/ZRqKVvRQ",
-        "description": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍\n4. 𝙉𝙀𝙒 𝙑𝙄𝘿𝙀𝙊𝙎 𝙐𝙋𝙇𝙊𝘼𝘿𝙀𝘿 𝙀𝙑𝙀𝙍𝙔 𝙎𝙐𝙉𝘿𝘼𝙔 ✅",
+        "image_url": "https://ibb.co/Fb6S1mYg",
+        "description": "1. YOU CAN SAVE IN GALLERY ✅\n2. NO ANY ADS ❌\n3. HIGH QUALITY VIDEOS 😍\n4. NEW VIDEOS UPLOADED EVERY SUNDAY ✅\n5. High quality and new videos best in telegram",
         "demo_videos": [
-            "https://videotourl.com/videos/1791609530271-d1845e11-78bd-4465-a0e3-3e0dd57fb424.mp4",
-            "https://videotourl.com/videos/1791610410648-c50ab2d2-b1b2-4998-8f5f-43a5f719b603.mp4",
-            "https://videotourl.com/videos/1791609652325-1646ca32-e73f-4a5a-9874-a0f4e401c6bb.mp4",
-            "https://videotourl.com/videos/1791609624603-358124e2-dbc4-43b2-9772-e18c1df57397.mp4",
-            "https://videotourl.com/videos/1791609569957-a7ce2e8a-e185-4dc6-893c-298a2d9c1b4c.mp4"
-        ]
+            "https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4"
+        ],
+        "delivery_link": "https://t.me/+delivery_link_2"
     },
     "plan_3": {
         "id": "plan_3",
-        "name": "𝘾𝙃𝙄!𝙇𝘿 𝙑𝙄𝘿!𝙀𝙊 ( 𝘾.𝙋) 🔥👀",
-        "number_of_videos": "70000+",
-        "price": 50,
+        "name": "INSTAGRAM Pack 3",
+        "number_of_videos": "50000+",
+        "price": 40,
         "validity": "180 days",
-        "image_url": "https://ibb.co/21H7BGM2",
-        "description": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍\n4. 𝙉𝙀𝙒 𝙑𝙄𝘿𝙀𝙊𝙎 𝙐𝙋𝙇𝙊𝘼𝘿𝙀𝘿 𝙀𝙑𝙀𝙍𝙔 𝙎𝙐𝙉𝘿𝘼𝙔 ✅",
+        "image_url": "https://ibb.co/Fb6S1mYg",
+        "description": "1. YOU CAN SAVE IN GALLERY ✅\n2. NO ANY ADS ❌\n3. HIGH QUALITY VIDEOS 😍\n4. NEW VIDEOS UPLOADED EVERY SUNDAY ✅\n5. High quality and new videos best in telegram",
         "demo_videos": [
-            "https://videotourl.com/videos/1791598226633-9d219b40-bf0b-4774-b493-6449c47d5ef1.mp4",
-            "https://videotourl.com/videos/1791598035486-79178a34-a631-49d2-870e-ff3425f1c058.mp4",
-            "https://videotourl.com/videos/1791611314862-1e0e5b81-0a04-436a-9749-4f5e9115404f.mp4",
-            "https://videotourl.com/videos/1791598059935-f6722923-e315-4b97-aaeb-e7b0af379f2b.mp4",
-            "https://videotourl.com/videos/1791598126801-a117ace0-e399-46e6-b697-0d3da6efeedd.mp4",
-            "https://videotourl.com/videos/1791598104865-7bca6c3f-db24-465d-9688-d153131af1e5.mp4",
-            "https://videotourl.com/videos/1791598207010-15f8101c-d87e-4e83-bd6a-43a333204662.mp4"
-        ]
+            "https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4"
+        ],
+        "delivery_link": "https://t.me/+delivery_link_3"
     },
     "plan_4": {
         "id": "plan_4",
-        "name": "𝙍!@𝙋𝙀 𝙑𝙄𝘿𝙀𝙊𝙎 💦👀",
-        "number_of_videos": "40000+",
-        "price": 70,
+        "name": "INSTAGRAM Pack 4",
+        "number_of_videos": "50000+",
+        "price": 40,
         "validity": "180 days",
-        "image_url": "https://ibb.co/QF2v05qK",
-        "description": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍\n4. 𝙉𝙀𝙒 𝙑𝙄𝘿𝙀𝙊𝙎 𝙐𝙋𝙇𝙊𝘼𝘿𝙀𝘿 𝙀𝙑𝙀𝙍𝙔 𝙎𝙐𝙉𝘿𝘼𝙔 ✅",
+        "image_url": "https://ibb.co/Fb6S1mYg",
+        "description": "1. YOU CAN SAVE IN GALLERY ✅\n2. NO ANY ADS ❌\n3. HIGH QUALITY VIDEOS 😍\n4. NEW VIDEOS UPLOADED EVERY SUNDAY ✅\n5. High quality and new videos best in telegram",
         "demo_videos": [
-            "https://videotourl.com/videos/1791598317965-12b2368c-6035-4e43-b708-df28bcd246b6.mp4",
-            "https://videotourl.com/videos/1791609986226-0b727823-bf05-42b7-80e8-c949f04b95ab.mp4",
-            "https://videotourl.com/videos/1791598333066-6d6fc74f-945c-4641-99d1-d862e59790d4.mp4",
-            "https://videotourl.com/videos/1791598348006-882fbe39-db59-4bb7-8636-1c2645fb93c0.mp4",
-            "https://videotourl.com/videos/1791611260635-789f7a13-25cd-4204-8ffc-455168319040.mp4",
-            "https://videotourl.com/videos/1791598360862-d0ddd962-c4e7-4c98-a860-d360bf6779f8.mp4",
-            "https://videotourl.com/videos/1791601968259-cb7b49a5-a8c5-45f9-9156-e08f71b052d0.mp4",
-            "https://videotourl.com/videos/1791598382840-4245fa8e-38f8-4737-8bb9-a2b8641a3d0f.mp4",
-            "https://videotourl.com/videos/1791598397313-ff9dd5ef-d489-4715-a2ca-a71c8923f162.mp4"
-        ]
+            "https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4"
+        ],
+        "delivery_link": "https://t.me/+delivery_link_4"
     },
     "plan_5": {
         "id": "plan_5",
-        "name": "𝘽𝘼𝘼𝙋 𝘽𝙀𝙏𝙄 🔥💦",
-        "number_of_videos": "30000+",
+        "name": "INSTAGRAM Pack 5",
+        "number_of_videos": "50000+",
         "price": 40,
         "validity": "180 days",
-        "image_url": "https://ibb.co/5X0hc5dd",
-        "description": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍\n4. 𝙉𝙀𝙒 𝙑𝙄𝘿𝙀𝙊𝙎 𝙐𝙋𝙇𝙊𝘼𝘿𝙀𝘿 𝙀𝙑𝙀𝙍𝙔 𝙎𝙐𝙉𝘿𝘼𝙔 ✅",
+        "image_url": "https://ibb.co/Fb6S1mYg",
+        "description": "1. YOU CAN SAVE IN GALLERY ✅\n2. NO ANY ADS ❌\n3. HIGH QUALITY VIDEOS 😍\n4. NEW VIDEOS UPLOADED EVERY SUNDAY ✅\n5. High quality and new videos best in telegram",
         "demo_videos": [
-            "https://videotourl.com/videos/1791609855846-9b6bac98-1fcf-4d60-b612-3e5abaf6be7e.mp4",
-            "https://videotourl.com/videos/1791614058029-1220e2df-44c4-467d-bbd7-755af32ada0c.mp4"
-        ]
+            "https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4"
+        ],
+        "delivery_link": "https://t.me/+delivery_link_5"
     },
     "plan_6": {
         "id": "plan_6",
-        "name": "𝘽𝙃𝘼𝘽𝙃𝙄 𝙑𝙄𝘿𝙀𝙊𝙎  💦👅",
-        "number_of_videos": "56000+",
+        "name": "INSTAGRAM Pack 6",
+        "number_of_videos": "50000+",
         "price": 40,
         "validity": "180 days",
-        "image_url": "https://ibb.co/N6wzXDHw",
-        "description": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍\n4. 𝙉𝙀𝙒 𝙑𝙄𝘿𝙀𝙊𝙎 𝙐𝙋𝙇𝙊𝘼𝘿𝙀𝘿 𝙀𝙑𝙀𝙍𝙔 𝙎𝙐𝙉𝘿𝘼𝙔 ✅",
+        "image_url": "https://ibb.co/Fb6S1mYg",
+        "description": "1. YOU CAN SAVE IN GALLERY ✅\n2. NO ANY ADS ❌\n3. HIGH QUALITY VIDEOS 😍\n4. NEW VIDEOS UPLOADED EVERY SUNDAY ✅\n5. High quality and new videos best in telegram",
         "demo_videos": [
-            "https://videotourl.com/videos/1791611037316-4db456f2-f82c-4468-9f48-381341ed6e55.mp4",
-            "https://videotourl.com/videos/1791611085614-c863517b-d989-4d6f-b6ef-d23db0b73f5a.mp4",
-            "https://videotourl.com/videos/1791611220352-ba6538bc-4db1-401e-81f7-88c53824e27f.mp4",
-            "https://videotourl.com/videos/1791609479203-02acf86c-6132-4bc2-8041-9f43ab529748.mp4",
-            "https://videotourl.com/videos/1791611168222-86d679dd-8a24-46fb-8b06-d59cc97e84c2.mp4",
-            "https://videotourl.com/videos/1791611005214-c25159ac-d514-4eff-8061-a25465ff6eba.mp4"
-        ]
+            "https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4"
+        ],
+        "delivery_link": "https://t.me/+delivery_link_6"
     },
     "plan_7": {
         "id": "plan_7",
-        "name": "𝘽𝙃𝘼𝙄 𝘽𝙀𝙃𝘼𝙉 🔥🥵 ",
-        "number_of_videos": "67000+",
-        "price": 45,
+        "name": "INSTAGRAM Pack 7",
+        "number_of_videos": "50000+",
+        "price": 40,
         "validity": "180 days",
-        "image_url": "https://ibb.co/9kKCd6ZF",
-        "description": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍\n4. 𝙉𝙀𝙒 𝙑𝙄𝘿𝙀𝙊𝙎 𝙐𝙋𝙇𝙊𝘼𝘿𝙀𝘿 𝙀𝙑𝙀𝙍𝙔 𝙎𝙐𝙉𝘿𝘼𝙔 ✅",
+        "image_url": "https://ibb.co/Fb6S1mYg",
+        "description": "1. YOU CAN SAVE IN GALLERY ✅\n2. NO ANY ADS ❌\n3. HIGH QUALITY VIDEOS 😍\n4. NEW VIDEOS UPLOADED EVERY SUNDAY ✅\n5. High quality and new videos best in telegram",
         "demo_videos": [
-            "https://videotourl.com/videos/1791611423923-36dbbbf3-84c1-4754-a7e4-dc05798eaa03.mp4",
-            "https://videotourl.com/videos/1791611350514-052fe889-5ac7-4446-91ef-2f928070e131.mp4",
-            "https://videotourl.com/videos/1791609591492-b5b0f616-27c5-436f-9aa9-e70720337677.mp4",
-            "https://videotourl.com/videos/1791609952353-7ee9382f-6db6-4c43-86ed-c8f418a3282c.mp4",
-            "https://videotourl.com/videos/1791609450717-98fd3d4d-533c-46fc-a290-9f9f937b6721.mp4"
-        ]
+            "https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4"
+        ],
+        "delivery_link": "https://t.me/+delivery_link_7"
     },
     "plan_8": {
         "id": "plan_8",
-        "name": "𝙂𝙄𝙍𝙇𝙎 𝙒𝙄𝙏𝙃 𝘼𝙉!𝙈@𝙇🔥",
-        "number_of_videos": "18000+",
-        "price": 45,
+        "name": "INSTAGRAM Pack 8",
+        "number_of_videos": "50000+",
+        "price": 40,
         "validity": "180 days",
-        "image_url": "https://ibb.co/WNP6gCzD",
-        "description": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍",
+        "image_url": "https://ibb.co/Fb6S1mYg",
+        "description": "1. YOU CAN SAVE IN GALLERY ✅\n2. NO ANY ADS ❌\n3. HIGH QUALITY VIDEOS 😍\n4. NEW VIDEOS UPLOADED EVERY SUNDAY ✅\n5. High quality and new videos best in telegram",
         "demo_videos": [
-            "https://videotourl.com/videos/1791611713436-2f106a4b-9ee1-4d9b-8e06-c30a0fe309e7.mp4",
-            "https://videotourl.com/videos/1791611779829-f05b75a9-65c7-441d-ad89-5d5f15301b01.mp4"
-        ]
+            "https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4"
+        ],
+        "delivery_link": "https://t.me/+delivery_link_8"
     },
     "plan_9": {
         "id": "plan_9",
-        "name": "𝙈𝙄𝙓 𝙂𝙍𝙊𝙐𝙋 1LAKH 𝙑𝙄𝘿𝙀𝙊𝙎 🥵  ",
-        "number_of_videos": "100000+",
-        "price": 70,
+        "name": "INSTAGRAM Pack 9",
+        "number_of_videos": "50000+",
+        "price": 40,
         "validity": "180 days",
-        "image_url": "https://ibb.co/zVvdkf09",
-        "description": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍\n4. 𝙉𝙀𝙒 𝙑𝙄𝘿𝙀𝙊𝙎 𝙐𝙋𝙇𝙊𝘼𝘿𝙀𝘿 𝙀𝙑𝙀𝙍𝙔 𝙁𝙍𝙄𝘿𝘼𝙔 ✅.",
+        "image_url": "https://ibb.co/Fb6S1mYg",
+        "description": "1. YOU CAN SAVE IN GALLERY ✅\n2. NO ANY ADS ❌\n3. HIGH QUALITY VIDEOS 😍\n4. NEW VIDEOS UPLOADED EVERY SUNDAY ✅\n5. High quality and new videos best in telegram",
         "demo_videos": [
-            "https://videotourl.com/videos/1791611593469-187437c5-8f84-41c6-afa1-3d61feb9ff72.mp4",
-            "https://videotourl.com/videos/1791611552865-c2cf6f7d-1544-4c34-9bdb-5e5fb2092584.mp4"
-        ]
-    },
-    "plan_multi_pack": {
-        "id": "plan_multi_pack",
-        "name": "✨ Multi-Pack Custom Bundle (₹23 Pack)",
-        "number_of_videos": "Custom Selection (4 Packs)",
-        "price": 120,
-        "validity": "180 days",
-        "image_url": "https://i.ibb.co/5X0hc5dd/logo.png",
-        "description": "Select exactly 4 packs from our existing plans to build your custom bundle for ₹120!"
-    },
-    "plan_direct_demo": {
-        "id": "plan_direct_demo",
-        "name": "🔥 Instant Demo Pack (₹20 Plan)",
-        "number_of_videos": "1000+",
-        "price": 20,
-        "validity": "30 days",
-        "image_url": "https://i.ibb.co/5X0hc5dd/logo.png",
-        "description": "Instant preview direct-demo pack with rapid access.",
-        "demo_videos": [
-            "https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4",
-            "https://videotourl.com/videos/1791609530271-d1845e11-78bd-4465-a0e3-3e0dd57fb424.mp4"
-        ]
-    },
-    "plan_vc_10": {
-        "id": "plan_vc_10",
-        "name": "🎙️ 10 Minutes VC Session",
-        "number_of_videos": "1-on-1 Live",
-        "price": 69,
-        "validity": "Live Session",
-        "image_url": "https://i.ibb.co/5X0hc5dd/logo.png",
-        "description": "10 Minutes Live Video Call Session with personal attention and direct interaction."
-    },
-    "plan_vc_20": {
-        "id": "plan_vc_20",
-        "name": "🎙️ 20 Minutes VC Session",
-        "number_of_videos": "1-on-1 Live",
-        "price": 130,
-        "validity": "Live Session",
-        "image_url": "https://i.ibb.co/5X0hc5dd/logo.png",
-        "description": "20 Minutes Live Video Call Session with extended duration and exclusive interaction."
-    },
-    "plan_vc_30": {
-        "id": "plan_vc_30",
-        "name": "🎙️ 30 Minutes VC Session",
-        "number_of_videos": "1-on-1 Live",
-        "price": 249,
-        "validity": "Live Session",
-        "image_url": "https://i.ibb.co/5X0hc5dd/logo.png",
-        "description": "30 Minutes Live Video Call Session featuring complete priority access and detailed interaction."
-    },
-    "plan_13": {
-        "id": "plan_13",
-        "name": "Mega Creator Bundle 13",
-        "number_of_videos": "12000+",
-        "price": 299,
-        "validity": "180 days",
-        "image_url": "https://i.ibb.co/5X0hc5dd/logo.png",
-        "description": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌",
-        "demo_videos": ["https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4"]
-    },
-    "plan_14": {
-        "id": "plan_14",
-        "name": "Pro Creator Bundle 14",
-        "number_of_videos": "1500+",
-        "price": 150,
-        "validity": "180 days",
-        "image_url": "https://i.ibb.co/5X0hc5dd/logo.png",
-        "description": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌",
-        "demo_videos": ["https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4"]
-    },
-    "plan_15": {
-        "id": "plan_15",
-        "name": "Elite Video Pack 15",
-        "number_of_videos": "1800+",
-        "price": 175,
-        "validity": "180 days",
-        "image_url": "https://i.ibb.co/5X0hc5dd/logo.png",
-        "description": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌",
-        "demo_videos": ["https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4"]
-    },
-    "plan_16": {
-        "id": "plan_16",
-        "name": "Special Masterclass 16",
-        "number_of_videos": "2200+",
-        "price": 220,
-        "validity": "180 days",
-        "image_url": "https://i.ibb.co/5X0hc5dd/logo.png",
-        "description": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌",
-        "demo_videos": ["https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4"]
-    },
-    "plan_17": {
-        "id": "plan_17",
-        "name": "Prime Creator Pack 17",
-        "number_of_videos": "2500+",
-        "price": 250,
-        "validity": "180 days",
-        "image_url": "https://i.ibb.co/5X0hc5dd/logo.png",
-        "description": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌",
-        "demo_videos": ["https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4"]
-    },
-    "plan_18": {
-        "id": "plan_18",
-        "name": "Ultra Bundle 18",
-        "number_of_videos": "3000+",
-        "price": 300,
-        "validity": "180 days",
-        "image_url": "https://i.ibb.co/5X0hc5dd/logo.png",
-        "description": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌",
-        "demo_videos": ["https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4"]
-    },
-    "plan_19": {
-        "id": "plan_19",
-        "name": "Supreme Creator Pack 19",
-        "number_of_videos": "3500+",
-        "price": 350,
-        "validity": "180 days",
-        "image_url": "https://i.ibb.co/5X0hc5dd/logo.png",
-        "description": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌",
-        "demo_videos": ["https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4"]
-    },
-    "plan_20": {
-        "id": "plan_20",
-        "name": "Grand Video Vault 20",
-        "number_of_videos": "4000+",
-        "price": 400,
-        "validity": "180 days",
-        "image_url": "https://i.ibb.co/5X0hc5dd/logo.png",
-        "description": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌",
-        "demo_videos": ["https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4"]
-    },
-    "plan_21": {
-        "id": "plan_21",
-        "name": "Infinity Creator Pack 21",
-        "number_of_videos": "4500+",
-        "price": 450,
-        "validity": "180 days",
-        "image_url": "https://i.ibb.co/5X0hc5dd/logo.png",
-        "description": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌",
-        "demo_videos": ["https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4"]
-    },
-    "plan_22": {
-        "id": "plan_22",
-        "name": "Legendary Collection 22",
-        "number_of_videos": "5000+",
-        "price": 500,
-        "validity": "180 days",
-        "image_url": "https://i.ibb.co/5X0hc5dd/logo.png",
-        "description": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌",
-        "demo_videos": ["https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4"]
-    },
-    "plan_23": {
-        "id": "plan_23",
-        "name": "Titanium Creator Pack 23",
-        "number_of_videos": "5500+",
-        "price": 550,
-        "validity": "180 days",
-        "image_url": "https://i.ibb.co/5X0hc5dd/logo.png",
-        "description": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌",
-        "demo_videos": ["https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4"]
+            "https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4"
+        ],
+        "delivery_link": "https://t.me/+delivery_link_9"
     },
     "plan_10": {
         "id": "plan_10",
-        "name": "𝗔𝗟𝗟 𝗩𝗜𝗣  𝗠𝗘𝗚𝗔 𝗣𝗔𝗖𝗞 🔥",
-        "number_of_videos": "10000+",
-        "price": 200,
+        "name": "INSTAGRAM Pack 10",
+        "number_of_videos": "50000+",
+        "price": 40,
         "validity": "180 days",
-        "image_url": "https://i.ibb.co/5X0hc5dd/logo.png",
-        "description": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍",
-        "demos": ["https://i.ibb.co/5X0hc5dd/logo.png"],
-        "gallery": ["https://i.ibb.co/5X0hc5dd/logo.png"]
+        "image_url": "https://ibb.co/Fb6S1mYg",
+        "description": "1. YOU CAN SAVE IN GALLERY ✅\n2. NO ANY ADS ❌\n3. HIGH QUALITY VIDEOS 😍\n4. NEW VIDEOS UPLOADED EVERY SUNDAY ✅\n5. High quality and new videos best in telegram",
+        "demo_videos": [
+            "https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4"
+        ],
+        "delivery_link": "https://t.me/+delivery_link_10"
+    },
+    "plan_11": {
+        "id": "plan_11",
+        "name": "INSTAGRAM Pack 11",
+        "number_of_videos": "50000+",
+        "price": 40,
+        "validity": "180 days",
+        "image_url": "https://ibb.co/Fb6S1mYg",
+        "description": "1. YOU CAN SAVE IN GALLERY ✅\n2. NO ANY ADS ❌\n3. HIGH QUALITY VIDEOS 😍\n4. NEW VIDEOS UPLOADED EVERY SUNDAY ✅\n5. High quality and new videos best in telegram",
+        "demo_videos": [
+            "https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4"
+        ],
+        "delivery_link": "https://t.me/+delivery_link_11"
+    },
+    "plan_12": {
+        "id": "plan_12",
+        "name": "INSTAGRAM Pack 12",
+        "number_of_videos": "50000+",
+        "price": 40,
+        "validity": "180 days",
+        "image_url": "https://ibb.co/Fb6S1mYg",
+        "description": "1. YOU CAN SAVE IN GALLERY ✅\n2. NO ANY ADS ❌\n3. HIGH QUALITY VIDEOS 😍\n4. NEW VIDEOS UPLOADED EVERY SUNDAY ✅\n5. High quality and new videos best in telegram",
+        "demo_videos": [
+            "https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4"
+        ],
+        "delivery_link": "https://t.me/+delivery_link_12"
+    },
+    "plan_13": {
+        "id": "plan_13",
+        "name": "INSTAGRAM Pack 13",
+        "number_of_videos": "50000+",
+        "price": 40,
+        "validity": "180 days",
+        "image_url": "https://ibb.co/Fb6S1mYg",
+        "description": "1. YOU CAN SAVE IN GALLERY ✅\n2. NO ANY ADS ❌\n3. HIGH QUALITY VIDEOS 😍\n4. NEW VIDEOS UPLOADED EVERY SUNDAY ✅\n5. High quality and new videos best in telegram",
+        "demo_videos": [
+            "https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4"
+        ],
+        "delivery_link": "https://t.me/+delivery_link_13"
+    },
+    "plan_14": {
+        "id": "plan_14",
+        "name": "INSTAGRAM Pack 14",
+        "number_of_videos": "50000+",
+        "price": 40,
+        "validity": "180 days",
+        "image_url": "https://ibb.co/Fb6S1mYg",
+        "description": "1. YOU CAN SAVE IN GALLERY ✅\n2. NO ANY ADS ❌\n3. HIGH QUALITY VIDEOS 😍\n4. NEW VIDEOS UPLOADED EVERY SUNDAY ✅\n5. High quality and new videos best in telegram",
+        "demo_videos": [
+            "https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4"
+        ],
+        "delivery_link": "https://t.me/+delivery_link_14"
+    },
+    "plan_15": {
+        "id": "plan_15",
+        "name": "INSTAGRAM Pack 15",
+        "number_of_videos": "50000+",
+        "price": 40,
+        "validity": "180 days",
+        "image_url": "https://ibb.co/Fb6S1mYg",
+        "description": "1. YOU CAN SAVE IN GALLERY ✅\n2. NO ANY ADS ❌\n3. HIGH QUALITY VIDEOS 😍\n4. NEW VIDEOS UPLOADED EVERY SUNDAY ✅\n5. High quality and new videos best in telegram",
+        "demo_videos": [
+            "https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4"
+        ],
+        "delivery_link": "https://t.me/+delivery_link_15"
+    },
+    "plan_16": {
+        "id": "plan_16",
+        "name": "art",
+        "number_of_videos": "58000+",
+        "price": 40,
+        "validity": "180 days",
+        "image_url": "https://ibb.co/Fb6S1mYg",
+        "description": "1. YOU CAN SAVE IN GALLERY ✅\n2. NO ANY ADS ❌\n3. HIGH QUALITY VIDEOS 😍\n4. NEW VIDEOS UPLOADED EVERY SUNDAY ✅\n5. High quality and new videos best in telegram",
+        "demo_videos": [
+            "https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4"
+        ],
+        "delivery_link": "https://t.me/+delivery_link_16"
+    },
+    "plan_17": {
+        "id": "plan_17",
+        "name": "INSTAGRAM Pack 17",
+        "number_of_videos": "50000+",
+        "price": 40,
+        "validity": "180 days",
+        "image_url": "https://ibb.co/Fb6S1mYg",
+        "description": "1. YOU CAN SAVE IN GALLERY ✅\n2. NO ANY ADS ❌\n3. HIGH QUALITY VIDEOS 😍\n4. NEW VIDEOS UPLOADED EVERY SUNDAY ✅\n5. High quality and new videos best in telegram",
+        "demo_videos": [
+            "https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4"
+        ],
+        "delivery_link": "https://t.me/+delivery_link_17"
+    },
+    "plan_18": {
+        "id": "plan_18",
+        "name": "Multiple Plan Bundle (Any 4)",
+        "number_of_videos": "60",
+        "price": 120,
+        "validity": "180 days",
+        "image_url": "https://ibb.co/Fb6S1mYg",
+        "description": "Choose any 4 plans priced at ₹50 or less! Select 4 items to continue.",
+        "demo_videos": [],
+        "delivery_link": "https://t.me/+delivery_link_18"
+    },
+    "plan_19": {
+        "id": "plan_19",
+        "name": "Direct Access Link",
+        "number_of_videos": "1",
+        "price": 50,
+        "validity": "180 days",
+        "image_url": "https://ibb.co/Fb6S1mYg",
+        "description": "Direct link delivery package.",
+        "demo_videos": [],
+        "delivery_link": "https://t.me/+delivery_link_19"
+    },
+    "plan_20": {
+        "id": "plan_20",
+        "name": "All VIP Lifetime Pack",
+        "number_of_videos": "500000+",
+        "price": 499,
+        "validity": "Lifetime",
+        "image_url": "https://ibb.co/Fb6S1mYg",
+        "description": "1. YOU CAN SAVE IN GALLERY ✅\n2. NO ANY ADS ❌\n3. HIGH QUALITY VIDEOS 😍\n4. NEW VIDEOS UPLOADED EVERY SUNDAY ✅\n5. High quality and new videos best in telegram",
+        "demo_videos": [],
+        "delivery_link": "https://t.me/+delivery_link_20"
     }
 }
 
-DB_FILE = "bot_database.db"
 
+# --- DATABASE INITIALIZATION ---
 def init_db():
-    conn = sqlite3.connect(DB_FILE)
+    conn = sqlite3.connect("bot.db")
     cursor = conn.cursor()
+
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             user_id INTEGER PRIMARY KEY,
             username TEXT,
             first_name TEXT,
-            joined_at TEXT
+            platform TEXT,
+            registered_at TEXT
         )
     """)
+
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS config (
+        CREATE TABLE IF NOT EXISTS settings (
             key TEXT PRIMARY KEY,
             value TEXT
         )
     """)
+
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS pending_purchases (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+        CREATE TABLE IF NOT EXISTS plans (
+            plan_id TEXT PRIMARY KEY,
+            name TEXT,
+            price REAL,
+            videos TEXT,
+            validity TEXT,
+            image_url TEXT,
+            caption TEXT,
+            demo_urls TEXT,
+            delivery_link TEXT,
+            is_active INTEGER DEFAULT 1
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS payments (
+            payment_id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER,
             plan_id TEXT,
-            price REAL,
+            amount REAL,
+            screenshot_file_id TEXT,
             status TEXT,
             created_at TEXT
         )
     """)
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS payment_submissions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            plan_id TEXT,
-            price REAL,
-            file_id TEXT,
-            status TEXT,
-            submitted_at TEXT
-        )
-    """)
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS purchases (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            plan_id TEXT,
-            price REAL,
-            approved_at TEXT
-        )
-    """)
-    cursor.execute("INSERT OR IGNORE INTO config (key, value) VALUES ('upi_id', ?)", (UPI_ID,))
+
+    conn.commit()
+
+    defaults = {
+        "upi_id": DEFAULT_UPI,
+        "proof_url": DEFAULT_PROOF_URL,
+        "support_url": DEFAULT_SUPPORT_URL,
+        "rating_msg": DEFAULT_RATING_MSG,
+        "last_promo_ts": "0"
+    }
+    for k, v in defaults.items():
+        cursor.execute("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", (k, v))
+
+    # Sync all code plan changes directly into SQLite on every startup
+    for pid, pdata in PLANS_DATA.items():
+        demos_str = ",".join(pdata.get("demo_videos", []))
+        cursor.execute("""
+            INSERT OR REPLACE INTO plans (plan_id, name, price, videos, validity, image_url, caption, demo_urls, delivery_link, is_active)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+        """, (
+            pid,
+            pdata["name"],
+            pdata["price"],
+            pdata["number_of_videos"],
+            pdata["validity"],
+            pdata["image_url"],
+            pdata["description"],
+            demos_str,
+            pdata["delivery_link"]
+        ))
+
     conn.commit()
     conn.close()
 
-def get_current_upi():
-    conn = sqlite3.connect(DB_FILE)
-    cursor = conn.cursor()
-    cursor.execute("SELECT value FROM config WHERE key='upi_id'")
-    row = cursor.fetchone()
-    conn.close()
-    return row[0] if row else UPI_ID
 
-logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
-logger = logging.getLogger(__name__)
+init_db()
 
-# ==========================================
-# BOT HANDLERS & LOGIC
-# ==========================================
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
-    conn = sqlite3.connect(DB_FILE)
+def get_plan_info(plan_num_or_id):
+    pid = str(plan_num_or_id)
+    if not pid.startswith("plan_"):
+        pid = f"plan_{pid}"
+
+    if pid in PLANS_DATA:
+        return PLANS_DATA[pid]
+
+    conn = sqlite3.connect("bot.db")
     cursor = conn.cursor()
     cursor.execute(
-        "INSERT OR IGNORE INTO users (user_id, username, first_name, joined_at) VALUES (?, ?, ?, ?)",
-        (user.id, user.username, user.first_name, datetime.utcnow().isoformat())
+        "SELECT plan_id, name, price, videos, validity, image_url, caption, demo_urls, delivery_link FROM plans WHERE plan_id=?",
+        (pid,)
+    )
+    row = cursor.fetchone()
+    conn.close()
+    if not row:
+        return None
+    demos = [u.strip() for u in (row[7] or "").split(",") if u.strip()]
+    return {
+        "id": row[0],
+        "name": row[1],
+        "price": row[2],
+        "number_of_videos": row[3],
+        "validity": row[4],
+        "image_url": row[5],
+        "description": row[6],
+        "demo_videos": demos,
+        "delivery_link": row[8],
+    }
+
+
+def format_price(price):
+    try:
+        val = float(price)
+        return str(int(val)) if val.is_integer() else f"{val:g}"
+    except Exception:
+        return str(price)
+
+
+def format_plan_button_text(pdata):
+    return f"{pdata['name']} • ₹{format_price(pdata['price'])}"
+
+
+def format_buy_button_text(pdata):
+    return f"Buy {pdata['name']} • ₹{format_price(pdata['price'])}"
+
+
+def get_setting(key):
+    conn = sqlite3.connect("bot.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT value FROM settings WHERE key=?", (key,))
+    row = cursor.fetchone()
+    conn.close()
+    return row[0] if row else ""
+
+
+def update_setting(key, value):
+    conn = sqlite3.connect("bot.db")
+    cursor = conn.cursor()
+    cursor.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", (key, str(value)))
+    conn.commit()
+    conn.close()
+
+
+def generate_upi_qr(upi_id, payee_name, amount, transaction_note="Digital Purchase"):
+    upi_url = f"upi://pay?pa={upi_id}&pn={payee_name}&am={amount}&cu=INR&tn={transaction_note}"
+    qr = qrcode.QRCode(version=1, box_size=10, border=4)
+    qr.add_data(upi_url)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    bio = io.BytesIO()
+    bio.name = "upi_qr.png"
+    img.save(bio, "PNG")
+    bio.seek(0)
+    return bio
+
+
+# --- BUTTON FACTORY (SAFE COLOR STYLING VIA api_kwargs) ---
+def make_button(text, callback_data=None, url=None, style=None):
+    kwargs = {}
+    if callback_data:
+        kwargs["callback_data"] = callback_data
+    if url:
+        kwargs["url"] = url
+    if style:
+        kwargs["api_kwargs"] = {"style": style}
+    return InlineKeyboardButton(text, **kwargs)
+
+
+# --- CLEAN CHAT HELPER ---
+async def safe_delete_message(message):
+    if not message:
+        return
+    try:
+        await message.delete()
+    except Exception:
+        pass
+
+
+# --- START & AGE GATE COMMAND ---
+async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    conn = sqlite3.connect("bot.db")
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        INSERT OR REPLACE INTO users (user_id, username, first_name, platform, registered_at)
+        VALUES (
+            ?, ?, ?,
+            COALESCE((SELECT platform FROM users WHERE user_id=?), 'PENDING'),
+            COALESCE((SELECT registered_at FROM users WHERE user_id=?), ?)
+        )
+        """,
+        (user.id, user.username, user.first_name, user.id, user.id, datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S"))
     )
     conn.commit()
     conn.close()
 
+    await safe_delete_message(update.message)
+
+    caption = (
+        f"👋 **Welcome, {user.first_name}!**\n\n"
+        f"Please confirm your age to continue:"
+    )
     keyboard = [
         [
-            InlineKeyboardButton("𝙔𝙀𝙎 𝙄 𝘼𝙈 18+ ✅", callback_data="start", style="success"),
-            InlineKeyboardButton("𝙄 𝘼𝙈 𝙉𝙊𝙏 18+ ❌", callback_data="exit", style="danger")
+            make_button("𝙔𝙀𝙎 𝙄 𝘼𝙈 18+ ✅", callback_data="start", style="success"),
+            make_button("𝙄 𝘼𝙈 𝙉𝙊𝙏 18+ ❌", callback_data="exit", style="danger")
         ]
     ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-
-    if update.callback_query:
-        await update.callback_query.message.delete()
-        await context.bot.send_photo(
-            chat_id=user.id,
-            photo=START_IMAGE_URL,
-            caption=START_CAPTION,
-            reply_markup=reply_markup,
-            parse_mode="HTML"
-        )
-    else:
-        try:
-            await update.message.reply_photo(
-                photo=START_IMAGE_URL,
-                caption=START_CAPTION,
-                reply_markup=reply_markup,
-                parse_mode="HTML"
-            )
-        except Exception:
-            logger.exception("START PHOTO ERROR")
-            await update.message.reply_text(START_CAPTION, reply_markup=reply_markup, parse_mode="HTML")
-
-async def exit_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer("Access Cancelled ❌", show_alert=True)
-    await query.edit_message_caption(caption="⚠️ <b>𝘼𝘾𝘾𝙀𝙎𝙎 𝘾𝘼𝙉𝘾𝙀𝙇𝙇𝙀𝘿</b> ❌", parse_mode="HTML")
-
-async def start_access_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    try:
-        await query.message.delete()
-    except Exception:
-        pass
-    await send_main_welcome(update.effective_user.id, context)
-
-def make_button(text, callback_data=None, url=None, style="primary"):
-    kwargs = {"text": text}
-    if callback_data is not None:
-        kwargs["callback_data"] = callback_data
-    if url is not None:
-        kwargs["url"] = url
-    return InlineKeyboardButton(**kwargs)
-
-async def send_main_welcome(chat_id: int, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = []
-
-    # ALL PLANS FIRST
-    for plan_key, plan in PLAN.items():
-        btn_text = f"{plan['name']} | ₹{plan['price']}"
-
-        keyboard.append([
-            make_button(
-                btn_text,
-                callback_data=f"plan_detail_{plan_key}",
-                style="danger"
-            )
-        ])
-
-    # DEMO - AFTER ALL PLANS
-    keyboard.append([
-    make_button(
-        "🎬 𝗗𝗘𝗠𝗢",
-        callback_data="main_demo_menu",
-        style="success"
-    )
-])
-
-    # PROOF CHANNEL
-    keyboard.append([
-        make_button(
-            "𝗣𝗥𝗢𝗢𝗙 𝗖𝗛𝗔𝗡𝗡𝗘𝗟",
-            url=PROOF_URL,
-            style="primary"
-        )
-    ])
-
-    # SUPPORT - LAST
-    keyboard.append([
-        make_button(
-            "𝗦𝗨𝗣𝗣𝗢𝗥𝗧 📞",
-            url=SUPPORT_URL,
-            style="success"
-        )
-    ])
-
-    reply_markup = InlineKeyboardMarkup(keyboard)
-
-    try:
-        await context.bot.send_photo(
-            chat_id=chat_id,
-            photo=WELCOME_IMAGE_URL,
-            caption=WELCOME_CAPTION,
-            reply_markup=reply_markup,
-            parse_mode="HTML"
-        )
-    except Exception:
-        logger.exception("WELCOME PHOTO ERROR")
-        await context.bot.send_message(
-            chat_id=chat_id,
-            text=WELCOME_CAPTION,
-            reply_markup=reply_markup,
-            parse_mode="HTML"
-        )
-
-    except Exception:
-        logger.exception("WELCOME PHOTO ERROR")
-
-        await context.bot.send_message(
-            chat_id=chat_id,
-            text=WELCOME_CAPTION,
-            reply_markup=reply_markup,
-            parse_mode="HTML"
-        )
-    except Exception:
-        logger.exception("WELCOME PHOTO ERROR")
-        await context.bot.send_message(
-            chat_id=chat_id,
-            text=WELCOME_CAPTION,
-            reply_markup=reply_markup,
-            parse_mode="HTML"
-        )
-
-async def vc_main_menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-
-    vc_caption = "🎙️ <b>𝙑𝙄𝘿𝙀𝙊 𝘾𝘼𝙇𝙇 (𝙑𝘾) 𝙋𝙇𝘼𝙉𝙎 𝙈𝙀𝙉𝙐</b> 🎙️\n\nSelect a session duration below for 1-on-1 private calls:"
-    keyboard = [
-        [InlineKeyboardButton("🎙️ 10 Minutes VC – ₹69", callback_data="plan_detail_plan_vc_10")],
-        [InlineKeyboardButton("🎙️ 20 Minutes VC – ₹130", callback_data="plan_detail_plan_vc_20")],
-        [InlineKeyboardButton("🎙️ 30 Minutes VC – ₹249", callback_data="plan_detail_plan_vc_30")],
-        [InlineKeyboardButton("🔙 BACK TO MAIN MENU", callback_data="back_to_main")]
-    ]
-    try:
-        await query.edit_message_media(
-            media=InputMediaPhoto(media=WELCOME_IMAGE_URL, caption=vc_caption, parse_mode="HTML"),
-            reply_markup=InlineKeyboardMarkup(keyboard)
-        )
-    except Exception:
-        await query.message.delete()
-        await context.bot.send_photo(
-            chat_id=update.effective_user.id,
-            photo=WELCOME_IMAGE_URL,
-            caption=vc_caption,
-            reply_markup=InlineKeyboardMarkup(keyboard),
-            parse_mode="HTML"
-        )
-
-async def main_demo_menu_callback(update, context):
-    query = update.callback_query
-    await query.answer()
-
-    keyboard = []
-    for plan in PLAN.values():
-        if not isinstance(plan, dict):
-            continue
-        plan_key = str(plan.get("id", "")).strip()
-        if not plan_key.startswith("plan_") or plan_key.startswith("plan_vc_"):
-            continue
-        if plan_key in ["plan_multi_pack"]:
-            continue
-
-        btn_text = f"🎬 Demo: {plan.get('name', plan_key)} | ₹{plan.get('price', 'N/A')} 🔥"
-        keyboard.append([make_button(btn_text, callback_data=f"demo_start_{plan_key}_0", style="danger")])
-
-    keyboard.append([make_button("🔙 BACK TO MAIN MENU", callback_data="back_to_main", style="primary")])
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    caption = "<b>𝙅𝙄𝙎 𝙋𝙇𝘼𝙉 𝙆𝘼 𝘿𝙀𝙈𝙊 𝘿𝙀𝙆𝙃𝙉𝘼 𝙃𝘼𝙄 𝙑𝙊 𝙎𝙀𝙇𝙀𝘾𝙏 𝙆𝘼𝙍𝙊 ❤️👇:</b>"
-
-    await query.edit_message_caption(caption=caption, reply_markup=reply_markup, parse_mode="HTML")
-
-async def back_to_main_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    await query.message.delete()
-    await send_main_welcome(update.effective_user.id, context)
-
-async def render_multipack_menu(query, context, edit_message=True):
-    selected = context.user_data.get("selected_packs", [])
-    count = len(selected)
-
-    keyboard = []
-    # Automatically extract existing plans from PLAN dict to use for selection (excluding special multi-pack, direct demo, and VC plans)
-    for p_id, p_data in PLAN.items():
-        if p_id in ["plan_multi_pack", "plan_direct_demo"] or p_id.startswith("plan_vc_"):
-            continue
-        is_sel = p_id in selected
-        prefix = "✅ " if is_sel else "🔲 "
-        btn_text = f"{prefix}{p_data['name']} (₹{p_data['price']})"
-        keyboard.append([InlineKeyboardButton(btn_text, callback_data=f"multipack_toggle_{p_id}")])
-
-    continue_text = f"Continue ({count}/4 Selected) {'🚀' if count == 4 else '🔒 (Select exactly 4)'}"
-    if count == 4:
-        keyboard.append([InlineKeyboardButton(continue_text, callback_data="multipack_continue")])
-    else:
-        keyboard.append([InlineKeyboardButton(continue_text, callback_data="multipack_invalid")])
-
-    keyboard.append([InlineKeyboardButton("🔙 BACK", callback_data="back_to_main")])
-
-    caption = (
-        "✨ <b>₹23 MULTI-PACK SELECTION INTERFACE</b> ✨\n\n"
-        f"📊 <b>Selection Status:</b> <code>{count}/4 Selected</code>\n"
-        "👉 Please choose exactly <b>4 packs</b> from your existing plans below:"
-    )
-
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    if edit_message:
-        try:
-            await query.edit_message_caption(caption=caption, reply_markup=reply_markup, parse_mode="HTML")
-        except Exception:
-            await query.message.delete()
-            await context.bot.send_photo(
-                chat_id=query.from_user.id,
-                photo="https://i.ibb.co/5X0hc5dd/logo.png",
-                caption=caption,
-                reply_markup=reply_markup,
-                parse_mode="HTML"
-            )
-    else:
-        await query.message.reply_text(caption, reply_markup=reply_markup, parse_mode="HTML")
-
-async def multipack_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    data = query.data
-
-    if data.startswith("multipack_toggle_"):
-        plan_id = data.replace("multipack_toggle_", "")
-        selected = context.user_data.setdefault("selected_packs", [])
-        if plan_id in selected:
-            selected.remove(plan_id)
-            await query.answer("Plan deselected ❌")
-        else:
-            if len(selected) >= 4:
-                await query.answer("You can select maximum 4 packs! Deselect one to change.", show_alert=True)
-            else:
-                selected.append(plan_id)
-                await query.answer("Plan selected ✅")
-        await render_multipack_menu(query, context, edit_message=True)
-
-    elif data == "multipack_invalid":
-        selected = context.user_data.get("selected_packs", [])
-        await query.answer(f"Current selection: {len(selected)}/4. You must select exactly 4 packs to continue!", show_alert=True)
-
-    elif data == "multipack_continue":
-        selected = context.user_data.get("selected_packs", [])
-        if len(selected) != 4:
-            await query.answer("Please select exactly 4 packs first!", show_alert=True)
-            return
-        await query.answer("Generating payment QR for ₹120...")
-        await trigger_upi_payment(query, context, "plan_multi_pack", 120.0)
-
-async def trigger_upi_payment(query, context, plan_id, price):
-    current_upi = get_current_upi()
-    upi_url = f"upi://pay?pa={current_upi}&pn={PAYEE_NAME}&am={price:.2f}&cu=INR"
-    img = qrcode.make(upi_url)
-    bio = io.BytesIO()
-    img.save(bio, format="PNG")
-    bio.seek(0)
-
-    caption = (
-        f"💳 <b>𝙋𝘼𝙔𝙈𝙀𝙉𝙏 𝙂𝘼𝙏𝙀𝙒𝘼𝙔</b> 💳\n\n"
-        f"📌 <b>Amount to Pay:</b> ₹{price:.2f}\n"
-        f"🎯 <b>UPI ID:</b> <code>{current_upi}</code>\n"
-        f"👤 <b>Payee:</b> {PAYEE_NAME}\n\n"
-        f"1️⃣ Scan the QR code using any UPI app (GPay, PhonePe, Paytm).\n"
-        f"2️⃣ Complete the payment of <b>₹{price:.2f}</b>.\n"
-        f"3️⃣ Send screenshot below for instant admin verification."
-    )
-    keyboard = [
-        [InlineKeyboardButton("📤 SUBMIT PAYMENT SCREENSHOT", callback_data=f"submit_proof_{plan_id}_{price}")],
-        [InlineKeyboardButton("🔙 BACK", callback_data="back_to_main")]
-    ]
-    try:
-        await query.message.delete()
-    except Exception:
-        pass
-
     await context.bot.send_photo(
-        chat_id=query.from_user.id,
-        photo=bio,
+        chat_id=update.effective_chat.id,
+        photo=START_IMAGE,
         caption=caption,
         reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode="HTML"
+        parse_mode="Markdown",
+        protect_content=True
     )
 
-async def plan_detail_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+async def handle_age_gate(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     data = query.data
-    plan_id = data.replace("plan_detail_", "")
-    plan = PLAN.get(plan_id)
-    if not plan:
-        await query.answer("Plan not found.", show_alert=True)
-        return
+    user = query.from_user
 
-    # SPECIAL PLAN: ₹20 PLAN – DIRECT DEMO
-    if plan_id == "plan_direct_demo":
-        demos = plan.get("demo_videos", [])
-        if demos:
-            media = [InputMediaVideo(media=fid, has_spoiler=True, caption="🎬 Instant Direct Demo" if i == 0 else "") for i, fid in enumerate(demos[:10])]
-            try:
-                await query.message.delete()
-                await context.bot.send_media_group(chat_id=update.effective_user.id, media=media)
-            except Exception as e:
-                logger.error(f"Error sending direct demo media group: {e}")
-        
-        caption = (
-            f"⚡ <b>{plan['name']}</b> ⚡\n\n"
-            f"💰 <b>Price:</b> ₹{plan['price']}\n"
-            f"⏳ <b>Validity:</b> {plan['validity']}\n\n"
-            f"<b>Description:</b>\n{plan.get('description', '')}"
+    if data == "exit":
+        await safe_delete_message(query.message)
+        text = (
+            "🚫 **ACCESS DENIED**\n\n"
+            "This bot is only for users **18+**.\n\n"
+            "Tap below if you are 18+."
         )
         keyboard = [
-            [InlineKeyboardButton(f"💳 BUY NOW ₹{plan['price']} 🔥", callback_data=f"buy_{plan_id}")],
-            [InlineKeyboardButton("🔙 BACK", callback_data="back_to_main")]
+            [make_button("𝙔𝙀𝙎 𝙄 𝘼𝙈 18+ ✅", callback_data="start", style="success")]
         ]
         await context.bot.send_message(
-            chat_id=update.effective_user.id,
-            text=caption,
+            chat_id=query.message.chat_id,
+            text=text,
             reply_markup=InlineKeyboardMarkup(keyboard),
-            parse_mode="HTML"
+            parse_mode="Markdown",
+            protect_content=True
         )
-        return
-
-    # SPECIAL PLAN: ₹23 MULTI-PACK SELECTION
-    if plan_id == "plan_multi_pack":
-        context.user_data["selected_packs"] = []
-        await render_multipack_menu(query, context, edit_message=True)
-        return
-
-    # SPECIAL VC PLANS
-    if plan_id in ["plan_vc_10", "plan_vc_20", "plan_vc_30"]:
-        vc_caption = (
-            f"🎙️ <b>{plan['name']}</b> 🎙️\n\n"
-            f"💰 <b>Price:</b> ₹{plan['price']}\n"
-            f"⏳ <b>Duration:</b> {plan['validity']}\n\n"
-            f"<b>Details:</b>\n{plan['description']}\n\n"
-            "👇 Click below to choose your preferred contact method to connect with us!"
+    elif data == "start":
+        await safe_delete_message(query.message)
+        caption = (
+            f"👋 **Welcome, {user.first_name}!**\n\n"
+            f"Which platform are you joining us from?"
         )
         keyboard = [
-            [InlineKeyboardButton("📱 Send in WhatsApp", callback_data=f"vc_contact_wa_{plan_id}")],
-            [InlineKeyboardButton("✈️ Send in Telegram", callback_data=f"vc_contact_tg_{plan_id}")],
-            [InlineKeyboardButton("🔙 BACK", callback_data="vc_main_menu")]
+            [
+                make_button("Instagram", callback_data="platform_instagram", style="primary"),
+                make_button("Facebook", callback_data="platform_facebook", style="danger")
+            ]
         ]
-        try:
-            await query.edit_message_media(
-                media=InputMediaPhoto(media=plan["image_url"], caption=vc_caption, parse_mode="HTML"),
-                reply_markup=InlineKeyboardMarkup(keyboard)
-            )
-        except Exception:
-            await query.message.delete()
-            await context.bot.send_photo(
-                chat_id=update.effective_user.id,
-                photo=plan["image_url"],
-                caption=vc_caption,
-                reply_markup=InlineKeyboardMarkup(keyboard),
-                parse_mode="HTML"
-            )
+        await context.bot.send_photo(
+            chat_id=query.message.chat_id,
+            photo=START_IMAGE,
+            caption=caption,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="Markdown",
+            protect_content=True
+        )
+
+
+async def handle_platform(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    data = query.data
+    user = query.from_user
+
+    if data == "platform_facebook":
+        await safe_delete_message(query.message)
+        text = (
+            "🚫 **ACCESS DENIED**\n\n"
+            "Sorry, this platform is currently not supported.\n\n"
+            "Please select **Instagram** to continue."
+        )
+        keyboard = [[make_button("« Back", callback_data="back_to_start", style="primary")]]
+        await context.bot.send_message(
+            chat_id=query.message.chat_id,
+            text=text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="Markdown",
+            protect_content=True
+        )
+    elif data == "platform_instagram":
+        conn = sqlite3.connect("bot.db")
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE users SET platform=?, username=?, first_name=? WHERE user_id=?",
+            ("Instagram", user.username, user.first_name, user.id)
+        )
+        conn.commit()
+        conn.close()
+        await show_main_menu(query.message, delete_old=True)
+
+
+def build_plans_only_keyboard():
+    keyboard = []
+    for i in range(1, 21):
+        pdata = get_plan_info(i)
+        if pdata:
+            keyboard.append([make_button(format_plan_button_text(pdata), callback_data=f"plan_view_{i}", style="danger")])
+    keyboard.append([make_button("« Back to Menu", callback_data="menu_main", style="primary")])
+    return InlineKeyboardMarkup(keyboard)
+
+
+async def send_plans_only(context: ContextTypes.DEFAULT_TYPE, chat_id: int, old_message=None):
+    await safe_delete_message(old_message)
+    text = (
+        "💎 **Available Plans**\n\n"
+        "Select a plan below to view details and get instant access:"
+    )
+    await context.bot.send_message(
+        chat_id=chat_id,
+        text=text,
+        reply_markup=build_plans_only_keyboard(),
+        parse_mode="Markdown",
+        protect_content=True
+    )
+
+
+async def show_main_menu(message, delete_old=False):
+    chat_id = message.chat_id
+    if delete_old:
+        await safe_delete_message(message)
+
+    caption = (
+        "🚀 **Welcome to the Ultimate Digital Products Hub**\n\n"
+        "Explore premium video collections, custom bundles, and VIP access packs.\n\n"
+        "✨ **Why Choose Us:**\n"
+        "• 100% Secure & Verified Deliveries\n"
+        "• Direct High-Speed Access & Gallery Save\n"
+        "• Regular Weekly Updates\n\n"
+        "👇 **Select a Plan or Watch a Demo Below:**"
+    )
+
+    keyboard = []
+    for i in range(1, 21):
+        pdata = get_plan_info(i)
+        if pdata:
+            keyboard.append([make_button(format_plan_button_text(pdata), callback_data=f"plan_view_{i}", style="danger")])
+
+    keyboard.append([make_button("🎬 Demo", callback_data="menu_demo", style="primary")])
+
+    keyboard.append([
+        make_button("Proof", callback_data="menu_proof", style="success"),
+        make_button("Support", callback_data="menu_support", style="danger")
+    ])
+    keyboard.append([
+        make_button("Is This Bot Trusted?", callback_data="menu_trusted", style="danger"),
+        make_button("How To Buy", callback_data="menu_howtobuy", style="primary")
+    ])
+
+    await message._bot.send_photo(
+        chat_id=chat_id,
+        photo=MAIN_WELCOME_IMAGE,
+        caption=caption,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="Markdown",
+        protect_content=True
+    )
+
+
+# --- CASE INSENSITIVE DEMO TEXT HANDLER ---
+async def handle_demo_text_trigger(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id in ADMIN_IDS and user_id in ADMIN_SESSIONS:
+        return
+    await safe_delete_message(update.message)
+    await show_main_demo_menu(context, update.effective_chat.id)
+
+
+async def show_main_demo_menu(context: ContextTypes.DEFAULT_TYPE, chat_id: int, old_message=None):
+    await safe_delete_message(old_message)
+    text = (
+        "🎬 **Choose a Plan Demo to Explore**\n"
+        "उस प्लान को चुनें जिसका आप डेमो देखना चाहते हैं:\n\n"
+        "👇 Tap any plan below to preview:"
+    )
+    keyboard = []
+    for i in range(1, 21):
+        if i in [18, 19, 20]:
+            continue
+        pdata = get_plan_info(i)
+        if pdata:
+            keyboard.append([make_button(f"🎬 {pdata['name']} Demo", callback_data=f"demo_run_{i}", style="primary")])
+    keyboard.append([make_button("« Back to Menu", callback_data="menu_main", style="primary")])
+
+    await context.bot.send_message(
+        chat_id=chat_id,
+        text=text,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="Markdown",
+        protect_content=True
+    )
+
+
+async def handle_plan_routing(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    data = query.data
+    chat_id = query.message.chat_id
+
+    if data == "bcast_see_plans":
+        await send_plans_only(context, chat_id, old_message=query.message)
         return
 
-    # Standard Plan Logic
-    caption = SHARED_CAPTION_TEMPLATE.format(
-        plan_name=plan["name"],
-        number_of_videos=plan["number_of_videos"],
-        price=plan["price"],
-        validity=plan["validity"],
-        description=plan.get("description", "N/A")
+    if data == "bcast_free_demo":
+        await show_main_demo_menu(context, chat_id, old_message=query.message)
+        return
+
+    if data == "back_to_start" or data == "menu_main":
+        await show_main_menu(query.message, delete_old=True)
+        return
+
+    if data == "menu_proof":
+        await safe_delete_message(query.message)
+        proof_url = get_setting("proof_url")
+        keyboard = [[make_button("« Back to Menu", callback_data="menu_main", style="primary")]]
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text=f"📢 **Check Proofs Here / प्रूफ यहाँ देखें**\n\n{proof_url}",
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="Markdown",
+            protect_content=True
+        )
+        return
+
+    if data == "menu_support":
+        await safe_delete_message(query.message)
+        support_url = get_setting("support_url")
+        keyboard = [[make_button("« Back to Menu", callback_data="menu_main", style="primary")]]
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text=f"💬 **Customer Support / सहायता**\n\n{support_url}",
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="Markdown",
+            protect_content=True
+        )
+        return
+
+    if data == "menu_trusted":
+        await safe_delete_message(query.message)
+        rating_msg = get_setting("rating_msg")
+        keyboard = [[make_button("« Back to Menu", callback_data="menu_main", style="primary")]]
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text=rating_msg,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="Markdown",
+            protect_content=True
+        )
+        return
+
+    if data == "menu_howtobuy":
+        await safe_delete_message(query.message)
+        guide = (
+            "📖 **HOW TO PURCHASE / खरीदने का तरीका**\n\n"
+            "**English:**\n"
+            "1. Select your favourite plan.\n"
+            "2. Watch its demo videos.\n"
+            "3. If you like it, click Buy Now.\n"
+            "4. Scan the QR code and pay.\n"
+            "5. Click Submit Payment.\n"
+            "6. Send your payment screenshot.\n"
+            "7. Receive your access link within 5 minutes.\n\n"
+            "**हिंदी:**\n"
+            "1. सबसे पहले अपनी पसंद का प्लान चुनें।\n"
+            "2. उस प्लान के डेमो देखें।\n"
+            "3. पसंद आने पर Buy Now पर क्लिक करें।\n"
+            "4. दिए गए QR Code को स्कैन करके पेमेंट करें।\n"
+            "5. Submit Payment पर क्लिक करें।\n"
+            "6. पेमेंट का स्क्रीनशॉट भेजें।\n"
+            "7. 5 मिनट के भीतर बॉट के जरिए लिंक मिल जाएगा।"
+        )
+        keyboard = [[make_button("« Back to Menu", callback_data="menu_main", style="primary")]]
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text=guide,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="Markdown",
+            protect_content=True
+        )
+        return
+
+    if data == "menu_demo":
+        await show_main_demo_menu(context, chat_id, old_message=query.message)
+        return
+
+    if data.startswith("demo_run_"):
+        plan_num = data.split("_")[2]
+        await start_demo_sequence(query, plan_num, 0, context)
+        return
+
+    if data.startswith("demo_nav_"):
+        parts = data.split("_")
+        plan_num = parts[2]
+        index = int(parts[3])
+        await start_demo_sequence(query, plan_num, index, context)
+        return
+
+    if data.startswith("plan_view_"):
+        plan_num = data.split("_")[2]
+        if plan_num == "18":
+            await show_plan_18(query, context)
+        elif plan_num == "19":
+            await show_plan_19(query, context)
+        elif plan_num == "20":
+            await show_plan_20(query, context)
+        else:
+            await show_standard_plan(query, plan_num, context)
+        return
+
+    if data.startswith("buy_plan_"):
+        plan_id = data.split("_")[2]
+        await initiate_payment(query, plan_id, context)
+        return
+    elif data.startswith("buy_"):
+        plan_id = data.split("_")[1]
+        await initiate_payment(query, plan_id, context)
+        return
+
+    if data.startswith("submit_pay_"):
+        plan_id = data.split("_")[2]
+        context.user_data["pending_plan_id"] = plan_id
+        await safe_delete_message(query.message)
+        keyboard = [[make_button("« Back to Menu", callback_data="menu_main", style="primary")]]
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text=(
+                "📸 **Upload Payment Screenshot**\n\n"
+                "Please send your payment screenshot now.\n"
+                "कृपया अपने पेमेंट का स्क्रीनशॉट भेजें।"
+            ),
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="Markdown",
+            protect_content=True
+        )
+        return
+
+    if data.startswith("p18_toggle_"):
+        p_num = data.split("_")[2]
+        await handle_bundle_toggle(query, p_num, context)
+        return
+
+    if data == "p18_checkout":
+        await process_bundle_checkout(query, context)
+        return
+
+    if data == "demo_plan_20":
+        await show_plan_20_demo(query, context)
+        return
+
+
+async def show_standard_plan(query, plan_num, context: ContextTypes.DEFAULT_TYPE):
+    pdata = get_plan_info(plan_num)
+    if not pdata:
+        return
+    await safe_delete_message(query.message)
+    delivery_time = random.randint(1, 4)
+
+    caption = (
+        f"📦 **Plan Details**\n\n"
+        f"• **Name:** {pdata['name']}\n"
+        f"• **Price:** ₹{format_price(pdata['price'])}\n"
+        f"• **Videos:** {pdata['number_of_videos']}\n"
+        f"• **Validity:** {pdata['validity']}\n"
+        f"• **Delivery Time:** {delivery_time} minutes\n\n"
+        f"✨ **Special Features:**\n{pdata['description']}"
     )
 
     keyboard = [
-        [InlineKeyboardButton("𝘿𝙀𝙈𝙊 🎬", callback_data=f"demo_start_{plan_id}_0")],
-        [InlineKeyboardButton(f"𝘽𝙐𝙔 𝙉𝙊𝙒 💳 ₹{plan['price']} 🔥", callback_data=f"buy_{plan_id}")],
-        [InlineKeyboardButton("𝘽𝘼𝘾𝙆", callback_data="back_to_main")]
+        [make_button(format_buy_button_text(pdata), callback_data=f"buy_plan_{plan_num}", style="success")],
+        [make_button(f"🎬 {pdata['name']} Demo", callback_data=f"demo_run_{plan_num}", style="primary")],
+        [make_button("« Back to Menu", callback_data="menu_main", style="primary")]
     ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+    await context.bot.send_photo(
+        chat_id=query.message.chat_id,
+        photo=pdata["image_url"],
+        caption=caption,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="Markdown",
+        protect_content=True
+    )
 
-    try:
-        await query.edit_message_media(
-            media=InputMediaPhoto(media=plan["image_url"], caption=caption, parse_mode="HTML"),
-            reply_markup=reply_markup
-        )
-    except Exception:
-        await query.message.delete()
-        await context.bot.send_photo(
-            chat_id=update.effective_user.id,
-            photo=plan["image_url"],
-            caption=caption,
-            reply_markup=reply_markup,
-            parse_mode="HTML"
-        )
 
-async def vc_contact_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    data = query.data
-    await query.answer()
-
-    if data.startswith("vc_contact_wa_"):
-        plan_id = data.replace("vc_contact_wa_", "")
-        plan = PLAN.get(plan_id, {})
-        msg = f"Hello, I want to book the {plan.get('name', 'VC Session')} for ₹{plan.get('price')}."
-        wa_url = f"https://wa.me/{VC_WHATSAPP_NUMBER}?text={msg.replace(' ', '%20')}"
-        keyboard = [[InlineKeyboardButton("💬 Click to Open WhatsApp", url=wa_url)], [InlineKeyboardButton("🔙 BACK", callback_data="vc_main_menu")]]
-        await query.edit_message_caption(caption=f"📱 <b>WhatsApp Contact Ready</b>\n\nClick below to open chat with pre-filled message:", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="HTML")
-    elif data.startswith("vc_contact_tg_"):
-        plan_id = data.replace("vc_contact_tg_", "")
-        plan = PLAN.get(plan_id, {})
-        msg = f"Hello, I want to book the {plan.get('name', 'VC Session')} for ₹{plan.get('price')}."
-        tg_url = f"https://t.me/{VC_TELEGRAM_USERNAME}?text={msg.replace(' ', '%20')}"
-        keyboard = [[InlineKeyboardButton("✈️ Click to Open Telegram Chat", url=tg_url)], [InlineKeyboardButton("🔙 BACK", callback_data="vc_main_menu")]]
-        await query.edit_message_caption(caption=f"✈️ <b>Telegram Contact Ready</b>\n\nClick below to message support directly:", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="HTML")
-
-async def buy_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    plan_id = query.data.replace("buy_", "")
-    plan = PLAN.get(plan_id)
-    if not plan:
-        await query.answer("Plan not found.", show_alert=True)
+async def start_demo_sequence(query, plan_num, index, context: ContextTypes.DEFAULT_TYPE):
+    pdata = get_plan_info(plan_num)
+    if not pdata:
         return
-    await trigger_upi_payment(query, context, plan_id, float(plan["price"]))
+    await safe_delete_message(query.message)
+    demo_urls = pdata.get("demo_videos", [])
 
-async def submit_proof_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not demo_urls or index >= len(demo_urls):
+        end_text = (
+            f"🎬 **Demo Info**\n\n"
+            f"Demo preview for **{pdata['name']}** has ended or has no extra clips.\n\n"
+            f"Unlock **{pdata['name']}** ({pdata['number_of_videos']} videos) for just **₹{format_price(pdata['price'])}**."
+        )
+        keyboard = [
+            [make_button(format_buy_button_text(pdata), callback_data=f"buy_plan_{plan_num}", style="success")],
+            [make_button(f"« Back to {pdata['name']}", callback_data=f"plan_view_{plan_num}", style="primary")]
+        ]
+        await context.bot.send_message(
+            chat_id=query.message.chat_id,
+            text=end_text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="Markdown",
+            protect_content=True
+        )
+        return
+
+    current_video_url = demo_urls[index]
+    nav_buttons = []
+    if index > 0:
+        nav_buttons.append(make_button("Previous Demo", callback_data=f"demo_nav_{plan_num}_{index-1}", style="primary"))
+    nav_buttons.append(make_button("Next Demo", callback_data=f"demo_nav_{plan_num}_{index+1}", style="primary"))
+
+    keyboard = [
+        nav_buttons,
+        [make_button(f"« Back to {pdata['name']}", callback_data=f"plan_view_{plan_num}", style="primary")]
+    ]
+
+    await context.bot.send_video(
+        chat_id=query.message.chat_id,
+        video=current_video_url,
+        caption=f"🎬 **{pdata['name']} Demo ({index+1}/{len(demo_urls)})**",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="Markdown",
+        protect_content=True
+    )
+
+
+# --- PLAN 18 (BUNDLE SELECTOR STRICTLY ≤ ₹50 ONLY) ---
+BUNDLE_STATE = {}
+
+
+async def show_plan_18(query, context: ContextTypes.DEFAULT_TYPE):
+    pdata18 = get_plan_info(18)
+    user_id = query.from_user.id
+    BUNDLE_STATE[user_id] = set()
+    await safe_delete_message(query.message)
+    caption = (
+        f"🎁 **{pdata18['name']} • ₹{format_price(pdata18['price'])}**\n\n"
+        f"Select 4 plans priced at ₹50 or less below.\n\n"
+        f"**Selected:** 0/4"
+    )
+    keyboard = build_bundle_keyboard(user_id)
+    await context.bot.send_photo(
+        chat_id=query.message.chat_id,
+        photo=pdata18["image_url"],
+        caption=caption,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="Markdown",
+        protect_content=True
+    )
+
+
+def build_bundle_keyboard(user_id):
+    pdata18 = get_plan_info(18)
+    bundle_price = format_price(pdata18["price"]) if pdata18 else "120"
+    selected = BUNDLE_STATE.get(user_id, set())
+    keyboard = []
+    for i in range(1, 18):
+        pdata = get_plan_info(i)
+        if pdata and float(pdata["price"]) <= 50:
+            status = "✅" if str(i) in selected else "➕"
+            keyboard.append([
+                make_button(
+                    f"{format_plan_button_text(pdata)}  {status}",
+                    callback_data=f"p18_toggle_{i}",
+                    style="primary" if str(i) in selected else "danger"
+                )
+            ])
+
+    if len(selected) == 4:
+        keyboard.append([make_button(f"Continue to Payment (₹{bundle_price})", callback_data="p18_checkout", style="success")])
+    else:
+        keyboard.append([make_button(f"Selected: {len(selected)}/4 (Select 4)", callback_data="ignore", style="danger")])
+
+    keyboard.append([make_button("« Back to Menu", callback_data="menu_main", style="primary")])
+    return keyboard
+
+
+async def handle_bundle_toggle(query, p_num, context: ContextTypes.DEFAULT_TYPE):
+    pdata18 = get_plan_info(18)
+    bundle_price = format_price(pdata18["price"]) if pdata18 else "120"
+    user_id = query.from_user.id
+    if user_id not in BUNDLE_STATE:
+        BUNDLE_STATE[user_id] = set()
+
+    if p_num in BUNDLE_STATE[user_id]:
+        BUNDLE_STATE[user_id].remove(p_num)
+    else:
+        if len(BUNDLE_STATE[user_id]) >= 4:
+            await query.answer("You can only select 4 plans!", show_alert=True)
+            return
+        BUNDLE_STATE[user_id].add(p_num)
+
+    keyboard = build_bundle_keyboard(user_id)
+    caption = (
+        f"🎁 **{pdata18['name']} • ₹{bundle_price}**\n\n"
+        f"Select 4 plans priced at ₹50 or less below.\n\n"
+        f"**Selected:** {len(BUNDLE_STATE[user_id])}/4"
+    )
+    await query.message.edit_caption(caption=caption, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+
+
+async def process_bundle_checkout(query, context: ContextTypes.DEFAULT_TYPE):
+    user_id = query.from_user.id
+    selected = BUNDLE_STATE.get(user_id, set())
+    if len(selected) != 4:
+        await query.answer("Please select 4 plans first!", show_alert=True)
+        return
+    fake_query = type("obj", (object,), {"from_user": query.from_user, "message": query.message})
+    await initiate_payment(fake_query, "18", context)
+
+
+# --- PLAN 19 (DIRECT URL SENDER) ---
+async def show_plan_19(query, context: ContextTypes.DEFAULT_TYPE):
+    pdata = get_plan_info(19)
+    if not pdata:
+        return
+    await safe_delete_message(query.message)
+    delivery_url = pdata.get("delivery_link", "https://t.me/+default_link")
+    caption = (
+        f"📌 **{pdata['name']}**\n\n"
+        f"• **Price:** ₹{format_price(pdata['price'])}\n"
+        f"• **Direct Link:** {delivery_url}\n\n"
+        f"Tap the button below to open your access link."
+    )
+    keyboard = [
+        [make_button("Access Channel / Link", url=delivery_url, style="success")],
+        [make_button("« Back to Menu", callback_data="menu_main", style="primary")]
+    ]
+    await context.bot.send_photo(
+        chat_id=query.message.chat_id,
+        photo=pdata.get("image_url", MAIN_WELCOME_IMAGE),
+        caption=caption,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="Markdown",
+        protect_content=True
+    )
+
+
+# --- PLAN 20 (ALL VIP LIFETIME PACK & IMGBB ALBUM DEMO) ---
+async def show_plan_20(query, context: ContextTypes.DEFAULT_TYPE):
+    pdata = get_plan_info(20)
+    if not pdata:
+        return
+    await safe_delete_message(query.message)
+    caption = (
+        f"👑 **{pdata['name']}**\n\n"
+        f"• **Price:** ₹{format_price(pdata['price'])}\n"
+        f"• **Videos:** {pdata['number_of_videos']}\n"
+        f"• **Validity:** {pdata['validity']}\n\n"
+        f"✨ **Benefits:**\n{pdata['description']}"
+    )
+    keyboard = [
+        [make_button(format_buy_button_text(pdata), callback_data="buy_plan_20", style="success")],
+        [make_button(f"🎬 {pdata['name']} Demo", callback_data="demo_plan_20", style="primary")],
+        [make_button("« Back to Menu", callback_data="menu_main", style="primary")]
+    ]
+    await context.bot.send_photo(
+        chat_id=query.message.chat_id,
+        photo=pdata["image_url"],
+        caption=caption,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="Markdown",
+        protect_content=True
+    )
+
+
+async def show_plan_20_demo(query, context: ContextTypes.DEFAULT_TYPE):
+    pdata = get_plan_info(20)
+    await safe_delete_message(query.message)
+    album = [
+        InputMediaPhoto(media="https://i.ibb.co/6y19mX1/sample1.jpg", caption=f"👑 {pdata['name']} Preview (10 Photos Album)"),
+        InputMediaPhoto(media="https://i.ibb.co/6y19mX1/sample2.jpg"),
+        InputMediaPhoto(media="https://i.ibb.co/6y19mX1/sample3.jpg"),
+        InputMediaPhoto(media="https://i.ibb.co/6y19mX1/sample4.jpg"),
+        InputMediaPhoto(media="https://i.ibb.co/6y19mX1/sample5.jpg"),
+        InputMediaPhoto(media="https://i.ibb.co/6y19mX1/sample6.jpg"),
+        InputMediaPhoto(media="https://i.ibb.co/6y19mX1/sample7.jpg"),
+        InputMediaPhoto(media="https://i.ibb.co/6y19mX1/sample8.jpg"),
+        InputMediaPhoto(media="https://i.ibb.co/6y19mX1/sample9.jpg"),
+        InputMediaPhoto(media="https://i.ibb.co/6y19mX1/sample10.jpg")
+    ]
+    await context.bot.send_media_group(chat_id=query.message.chat_id, media=album, protect_content=True)
+    keyboard = [
+        [make_button(format_buy_button_text(pdata), callback_data="buy_plan_20", style="success")],
+        [make_button(f"« Back to {pdata['name']}", callback_data="plan_view_20", style="primary")]
+    ]
+    await context.bot.send_message(
+        chat_id=query.message.chat_id,
+        text=f"👆 Preview complete! Ready to unlock {pdata['name']}?",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        protect_content=True
+    )
+
+
+# --- PAYMENT SYSTEM & SCREENSHOT VERIFICATION ---
+async def initiate_payment(query, plan_id, context: ContextTypes.DEFAULT_TYPE):
+    pdata = get_plan_info(plan_id)
+    name = pdata["name"] if pdata else f"Plan {plan_id}"
+    price = pdata["price"] if pdata else 100
+    price_str = format_price(price)
+    upi_id = get_setting("upi_id")
+    await safe_delete_message(query.message)
+
+    qr_bio = generate_upi_qr(upi_id=upi_id, payee_name="Social Flux", amount=price_str, transaction_note=name)
+
+    caption = (
+        f"💳 **Payment Details / पेमेंट विवरण**\n\n"
+        f"• **Plan:** {name}\n"
+        f"• **Amount:** ₹{price_str}\n"
+        f"• **UPI ID:** `{upi_id}`\n\n"
+        f"📌 **How to Complete:**\n"
+        f"1. Scan the QR code or pay to the UPI ID above.\n"
+        f"2. Tap **Submit Payment** and send your screenshot."
+    )
+
+    keyboard = [
+        [make_button("Submit Payment", callback_data=f"submit_pay_{plan_id}", style="success")],
+        [make_button("« Back", callback_data=f"plan_view_{plan_id}", style="primary")]
+    ]
+
+    await context.bot.send_photo(
+        chat_id=query.message.chat_id,
+        photo=qr_bio,
+        caption=caption,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="Markdown",
+        protect_content=True
+    )
+
+
+async def handle_screenshot_upload(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    plan_id = context.user_data.get("pending_plan_id")
+    if not plan_id:
+        return
+
+    context.user_data.pop("pending_plan_id", None)
+    photo_file_id = update.message.photo[-1].file_id
+
+    pdata = get_plan_info(plan_id)
+    name = pdata["name"] if pdata else f"Plan {plan_id}"
+    price = pdata["price"] if pdata else 100.0
+    price_str = format_price(price)
+
+    conn = sqlite3.connect("bot.db")
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO payments (user_id, plan_id, amount, screenshot_file_id, status, created_at)
+        VALUES (?, ?, ?, ?, 'PENDING', ?)
+    """, (user_id, str(plan_id), price, photo_file_id, datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S")))
+    payment_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+
+    keyboard = [[make_button("« Back to Menu", callback_data="menu_main", style="primary")]]
+    await update.message.reply_text(
+        "✅ **Payment Submitted**\n\n"
+        "Please wait 5–10 minutes while we verify your payment.\n"
+        "कृपया 5–10 मिनट इंतज़ार करें, पेमेंट वेरीफाई किया जा रहा है।",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="Markdown",
+        protect_content=True
+    )
+
+    user = update.effective_user
+    username_str = f"@{user.username}" if user.username else "@NA"
+    admin_caption = (
+        f"🚨 **NEW PAYMENT REQUEST**\n\n"
+        f"• **Plan Name:** {name}\n"
+        f"• **User Name:** {username_str}\n"
+        f"• **User ID:** `{user.id}`\n"
+        f"• **Price:** ₹{price_str}"
+    )
+    admin_keyboard = [
+        [
+            make_button("Approve", callback_data=f"adm_approve_{payment_id}", style="success"),
+            make_button("Reject", callback_data=f"adm_reject_{payment_id}", style="danger")
+        ]
+    ]
+
+    for admin_id in ADMIN_IDS:
+        try:
+            await context.bot.send_photo(
+                chat_id=admin_id,
+                photo=photo_file_id,
+                caption=admin_caption,
+                reply_markup=InlineKeyboardMarkup(admin_keyboard),
+                parse_mode="Markdown"
+            )
+        except Exception as e:
+            logger.error(f"Failed to notify admin {admin_id}: {e}")
+
+
+# --- ADMIN PAYMENT APPROVAL & PUBLIC BROADCAST ---
+async def handle_admin_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    data_parts = query.data.replace("submit_proof_", "").split("_")
-    plan_id = data_parts[0]
-    context.user_data["awaiting_proof_for"] = plan_id
-    await query.message.reply_text("📤 Please send the screenshot of your payment now. Our system will forward it to admin for verification.")
+    parts = query.data.split("_")
+    action = parts[1]
+    payment_id = parts[2]
 
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
-    if "awaiting_proof_for" in context.user_data and update.message.photo:
-        plan_id = context.user_data.pop("awaiting_proof_for")
-        plan = PLAN.get(plan_id, {})
-        file_id = update.message.photo[-1].file_id
+    conn = sqlite3.connect("bot.db")
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT user_id, plan_id, status, amount, screenshot_file_id, created_at FROM payments WHERE payment_id=?",
+        (payment_id,)
+    )
+    pay_row = cursor.fetchone()
 
-        conn = sqlite3.connect(DB_FILE)
-        cursor = conn.cursor()
-        cursor.execute(
-            "INSERT INTO payment_submissions (user_id, plan_id, price, file_id, status, submitted_at) VALUES (?, ?, ?, ?, ?, ?)",
-            (user.id, plan_id, plan.get("price", 0), file_id, "pending", datetime.utcnow().isoformat())
-        )
-        sub_id = cursor.lastrowid
+    if not pay_row:
+        conn.close()
+        await query.edit_message_caption(caption="Payment record not found.")
+        return
+
+    user_id, plan_id, status, amount, screenshot_file_id, created_at = pay_row
+    if status != "PENDING":
+        conn.close()
+        await query.edit_message_caption(caption=f"Payment already processed ({status}).")
+        return
+
+    pdata = get_plan_info(plan_id)
+    plan_name = pdata["name"] if pdata else "Premium Plan"
+    delivery_link = pdata["delivery_link"] if pdata else "https://t.me/+default_link"
+    price_str = format_price(pdata["price"] if pdata else amount)
+
+    if action == "approve":
+        cursor.execute("UPDATE payments SET status='APPROVED' WHERE payment_id=?", (payment_id,))
+        cursor.execute("SELECT user_id FROM users")
+        all_users = cursor.fetchall()
         conn.commit()
         conn.close()
 
-        await update.message.reply_text("✅ Payment screenshot submitted successfully! Admin will verify and approve shortly.")
+        await query.edit_message_caption(caption=f"✅ Approved for {plan_name} (User ID: {user_id})")
 
-        # Notify Admins
-        admin_keyboard = [
-            [InlineKeyboardButton("✅ Approve", callback_data=f"admin_approve_{sub_id}"), InlineKeyboardButton("❌ Reject", callback_data=f"admin_reject_{sub_id}")]
-        ]
-        for admin_id in ADMIN_IDS:
+        user_keyboard = [[make_button("JOIN YOUR CHANNEL", url=delivery_link, style="success")]]
+        try:
+            await context.bot.send_message(
+                chat_id=user_id,
+                text=(
+                    "🎉 **Congratulations!**\n\n"
+                    "Your payment has been approved and your access is ready.\n\n"
+                    "Tap the button below to join your channel:"
+                ),
+                reply_markup=InlineKeyboardMarkup(user_keyboard),
+                parse_mode="Markdown",
+                protect_content=True
+            )
+        except Exception as e:
+            logger.error(f"Failed to send delivery link to user {user_id}: {e}")
+
+        public_caption = (
+            f"🎉 **OUR NEW USER PURCHASED A PLAN**\n\n"
+            f"• **Plan Name:** {plan_name}\n"
+            f"• **Price:** ₹{price_str}\n"
+            f"• **Date & Time:** {created_at} IST\n"
+            f"• **Status:** Purchased ✅"
+        )
+        broadcast_buttons = InlineKeyboardMarkup([
+            [
+                make_button("See Plans", callback_data="bcast_see_plans", style="success"),
+                make_button("Free Demo", callback_data="bcast_free_demo", style="primary")
+            ]
+        ])
+
+        for (uid,) in all_users:
             try:
                 await context.bot.send_photo(
-                    chat_id=admin_id,
-                    photo=file_id,
-                    caption=f"🔔 <b>New Payment Submission!</b>\n\n👤 User: @{user.username} ({user.id})\n📦 Plan: {plan.get('name')}\n💰 Price: ₹{plan.get('price')}",
-                    reply_markup=InlineKeyboardMarkup(admin_keyboard),
-                    parse_mode="HTML"
+                    chat_id=uid,
+                    photo=screenshot_file_id,
+                    caption=public_caption,
+                    reply_markup=broadcast_buttons,
+                    parse_mode="Markdown",
+                    protect_content=True
                 )
             except Exception:
                 pass
 
-async def admin_action_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    elif action == "reject":
+        cursor.execute("UPDATE payments SET status='REJECTED' WHERE payment_id=?", (payment_id,))
+        conn.commit()
+        conn.close()
+
+        await query.edit_message_caption(caption=f"❌ Rejected for {plan_name} (User ID: {user_id})")
+        try:
+            await context.bot.send_message(
+                chat_id=user_id,
+                text=(
+                    "❌ **Payment Not Verified**\n\n"
+                    "Your payment could not be verified. Please contact support for assistance."
+                ),
+                parse_mode="Markdown",
+                protect_content=True
+            )
+        except Exception as e:
+            logger.error(f"Failed to notify user {user_id}: {e}")
+
+
+# --- ADMIN PANEL, DEPLOY PROMO & BROADCAST ---
+ADMIN_SESSIONS = {}
+
+
+async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id not in ADMIN_IDS:
+        await update.message.reply_text("Unauthorized access.")
+        return
+
+    await safe_delete_message(update.message)
+    keyboard = [
+        [
+            make_button("Change UPI", callback_data="adm_set_upi", style="primary"),
+            make_button("Set Rating Message", callback_data="adm_set_rating", style="primary")
+        ],
+        [
+            make_button("Today's Revenue", callback_data="adm_revenue", style="success"),
+            make_button("Broadcast", callback_data="adm_broadcast", style="danger")
+        ],
+        [make_button("🚀 Deploy Promo", callback_data="adm_deploy_promo", style="success")],
+        [make_button("« Back to Main Menu", callback_data="menu_main", style="primary")]
+    ]
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text="⚙️ **Admin Dashboard**",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="Markdown"
+    )
+
+
+async def handle_admin_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    user = update.effective_user
-    if user.id not in ADMIN_IDS:
-        await query.answer("Unauthorized!", show_alert=True)
+    user_id = query.from_user.id
+    if user_id not in ADMIN_IDS:
         return
 
     data = query.data
-    if data.startswith("admin_approve_"):
-        sub_id = int(data.replace("admin_approve_", ""))
-        conn = sqlite3.connect(DB_FILE)
+    if data == "adm_revenue":
+        conn = sqlite3.connect("bot.db")
         cursor = conn.cursor()
-        cursor.execute("SELECT user_id, plan_id, price FROM payment_submissions WHERE id=?", (sub_id,))
-        row = cursor.fetchone()
-        if row:
-            u_id, p_id, price = row
-            cursor.execute("UPDATE payment_submissions SET status='approved' WHERE id=?", (sub_id,))
-            cursor.execute("INSERT INTO purchases (user_id, plan_id, price, approved_at) VALUES (?, ?, ?, ?)", (u_id, p_id, price, datetime.utcnow().isoformat()))
-            conn.commit()
-            conn.close()
-            await query.answer("Approved successfully ✅")
-            await query.edit_message_caption(caption=query.message.caption + "\n\n<b>STATUS: APPROVED ✅</b>", parse_mode="HTML")
-            try:
-                await context.bot.send_message(chat_id=u_id, text="🎉 Your payment has been approved by admin! Enjoy your premium access.")
-            except Exception:
-                pass
-    elif data.startswith("admin_reject_"):
-        sub_id = int(data.replace("admin_reject_", ""))
-        conn = sqlite3.connect(DB_FILE)
-        cursor = conn.cursor()
-        cursor.execute("UPDATE payment_submissions SET status='rejected' WHERE id=?", (sub_id,))
-        conn.commit()
-        conn.close()
-        await query.answer("Rejected ❌")
-        await query.edit_message_caption(caption=query.message.caption + "\n\n<b>STATUS: REJECTED ❌</b>", parse_mode="HTML")
+        today_date = datetime.now(IST).strftime("%Y-%m-%d")
 
-# ==========================================
-# MAIN INITIALIZATION
-# ==========================================
+        cursor.execute("SELECT SUM(amount) FROM payments WHERE status='APPROVED' AND created_at LIKE ?", (f"{today_date}%",))
+        rev = cursor.fetchone()[0] or 0.0
+
+        cursor.execute("SELECT COUNT(*) FROM payments WHERE status='APPROVED'")
+        app_count = cursor.fetchone()[0]
+
+        cursor.execute("SELECT COUNT(*) FROM payments WHERE status='PENDING'")
+        pend_count = cursor.fetchone()[0]
+
+        cursor.execute("SELECT COUNT(*) FROM payments WHERE status='REJECTED'")
+        rej_count = cursor.fetchone()[0]
+        conn.close()
+
+        report = (
+            f"📊 **Today's Revenue Report**\n"
+            f"Date: {today_date} (Asia/Kolkata)\n\n"
+            f"• **Today's Revenue:** ₹{format_price(rev)}\n"
+            f"• **Total Approved Payments:** {app_count}\n"
+            f"• **Pending Payments:** {pend_count}\n"
+            f"• **Rejected Payments:** {rej_count}"
+        )
+        await query.answer()
+        await query.message.reply_text(report, parse_mode="Markdown")
+
+    elif data == "adm_deploy_promo":
+        now_ts = int(time.time())
+        last_ts = int(float(get_setting("last_promo_ts") or "0"))
+        elapsed = now_ts - last_ts
+
+        if elapsed < PROMO_COOLDOWN_SECONDS:
+            await query.answer("Function on cooldown, try after 10 min", show_alert=True)
+            await query.message.reply_text("⏳ Function on cooldown, try after 10 min")
+            return
+
+        update_setting("last_promo_ts", str(now_ts))
+        await query.answer("Deploying promo to all users...")
+
+        conn = sqlite3.connect("bot.db")
+        cursor = conn.cursor()
+        cursor.execute("SELECT user_id, first_name FROM users")
+        all_users = cursor.fetchall()
+        conn.close()
+
+        sent_count = 0
+        skipped_count = 0
+        promo_keyboard = InlineKeyboardMarkup([
+            [make_button("See Plans", callback_data="bcast_see_plans", style="success")]
+        ])
+
+        for uid, fname in all_users:
+            safe_name = fname if fname else "Dost"
+            promo_text = (
+                f"suno {safe_name} abhi tak tumne premium ka maja nai liya hai aur abhi offer chal rha hai to price kam hai bad me bardh sakte hai to abhi lo aur maje kro 💗😁\n\n"
+                f"hamare bot ke fayde 👇\n"
+                f"1. 100 percent trusted bot ✅\n"
+                f"2. 24/7 support milega 📞\n"
+                f"3. high quality and fresh videos ✅\n"
+                f"4. you can save in gallery ✅\n"
+                f"5. no any chanel ban issue ✅\n\n"
+                f"niche diye gaye plans se apna plan chuno aur pao turant access 🔥😘"
+            )
+            try:
+                await context.bot.send_message(
+                    chat_id=uid,
+                    text=promo_text,
+                    reply_markup=promo_keyboard,
+                    protect_content=True
+                )
+                sent_count += 1
+            except Exception:
+                skipped_count += 1
+
+        await query.message.reply_text(
+            f"🚀 **Promo Broadcast Finished**\n\n"
+            f"• **Total Users:** {len(all_users)}\n"
+            f"• **Delivered:** {sent_count}\n"
+            f"• **Unavailable / Blocked:** {skipped_count}",
+            parse_mode="Markdown"
+        )
+
+    elif data == "adm_set_upi":
+        ADMIN_SESSIONS[user_id] = "waiting_upi"
+        await query.answer()
+        await query.message.reply_text("Please reply with the new UPI ID:")
+
+    elif data == "adm_set_rating":
+        ADMIN_SESSIONS[user_id] = "waiting_rating"
+        await query.answer()
+        await query.message.reply_text("Please reply with the new Trust / Rating message:")
+
+    elif data == "adm_broadcast":
+        ADMIN_SESSIONS[user_id] = "waiting_broadcast"
+        await query.answer()
+        await query.message.reply_text("Please send the message, photo, or media you want to broadcast to all users:")
+
+
+async def handle_admin_text_inputs(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id not in ADMIN_IDS or user_id not in ADMIN_SESSIONS:
+        return
+
+    state = ADMIN_SESSIONS.pop(user_id)
+
+    if state == "waiting_upi":
+        text = update.message.text.strip()
+        update_setting("upi_id", text)
+        await update.message.reply_text(f"✅ UPI ID successfully updated to: `{text}`", parse_mode="Markdown")
+
+    elif state == "waiting_rating":
+        text = update.message.text
+        update_setting("rating_msg", text)
+        await update.message.reply_text("✅ Trust / Rating message updated successfully!")
+
+    elif state == "waiting_broadcast":
+        conn = sqlite3.connect("bot.db")
+        cursor = conn.cursor()
+        cursor.execute("SELECT user_id FROM users")
+        all_users = cursor.fetchall()
+        conn.close()
+
+        success = 0
+        blocked = 0
+        failed = 0
+        total = len(all_users)
+
+        status_msg = await update.message.reply_text(f"📢 Broadcast started to {total} users...")
+
+        for (uid,) in all_users:
+            try:
+                await update.message.copy(chat_id=uid, protect_content=True)
+                success += 1
+            except Exception as e:
+                err_str = str(e).lower()
+                if "blocked" in err_str or "deactivated" in err_str:
+                    blocked += 1
+                else:
+                    failed += 1
+
+        await status_msg.edit_text(
+            f"📢 **Broadcast Completed Report**\n\n"
+            f"• **Total Users:** {total}\n"
+            f"• **Successful Deliveries:** {success}\n"
+            f"• **Blocked Bots:** {blocked}\n"
+            f"• **Failed Deliveries:** {failed}",
+            parse_mode="Markdown"
+        )
+
+
 def main():
-    init_db()
     application = Application.builder().token(BOT_TOKEN).build()
 
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CallbackQueryHandler(start_access_callback, pattern="^start$"))
-    application.add_handler(CallbackQueryHandler(exit_callback, pattern="^exit$"))
-    application.add_handler(CallbackQueryHandler(vc_main_menu_callback, pattern="^vc_main_menu$"))
-    application.add_handler(CallbackQueryHandler(main_demo_menu_callback, pattern="^main_demo_menu$"))
-    application.add_handler(CallbackQueryHandler(back_to_main_callback, pattern="^back_to_main$"))
-    application.add_handler(CallbackQueryHandler(plan_detail_callback, pattern="^plan_detail_"))
-    application.add_handler(CallbackQueryHandler(vc_contact_handler, pattern="^vc_contact_"))
-    application.add_handler(CallbackQueryHandler(multipack_callback_handler, pattern="^multipack_"))
-    application.add_handler(CallbackQueryHandler(buy_callback, pattern="^buy_"))
-    application.add_handler(CallbackQueryHandler(submit_proof_callback, pattern="^submit_proof_"))
-    application.add_handler(CallbackQueryHandler(admin_action_callback, pattern="^admin_"))
-    application.add_handler(MessageHandler(filters.PHOTO, handle_message))
+    application.add_handler(CommandHandler("start", start_command))
+    application.add_handler(CommandHandler("admin", admin_panel))
 
-    print("Bot is starting...")
+    application.add_handler(CallbackQueryHandler(handle_age_gate, pattern="^(start|exit)$"))
+    application.add_handler(CallbackQueryHandler(handle_platform, pattern="^platform_"))
+    application.add_handler(CallbackQueryHandler(handle_plan_routing, pattern="^(menu_|plan_view_|demo_|buy_|p18_|submit_pay_|bcast_)"))
+    application.add_handler(CallbackQueryHandler(handle_admin_action, pattern="^adm_(approve|reject)_"))
+    application.add_handler(CallbackQueryHandler(handle_admin_callbacks, pattern="^adm_"))
+
+    # Case-insensitive DEMO / demo / Demo keyword handler
+    application.add_handler(MessageHandler(filters.Regex(r"(?i)^demo$") & ~filters.COMMAND, handle_demo_text_trigger))
+
+    application.add_handler(MessageHandler(filters.PHOTO & ~filters.COMMAND, handle_screenshot_upload))
+    application.add_handler(
+        MessageHandler(
+            (filters.TEXT | filters.PHOTO | filters.VIDEO | filters.DOCUMENT) & ~filters.COMMAND & filters.User(user_id=ADMIN_IDS),
+            handle_admin_text_inputs
+        )
+    )
+
+    logger.info("Bot started successfully...")
     application.run_polling()
+
 
 if __name__ == "__main__":
     main()
