@@ -75,10 +75,10 @@ PLANS_DATA = {
         "delivery_link": "https://t.me/+delivery_link_1"
     },
     "plan_2": {
-        "id": 2,
-        "name": "Exclusive Video Bundle 2",
+        "id": "plan_2",
+        "name": "𝙈𝙊𝙈 𝘼𝙉𝘿 𝙎𝙊𝙉 😍🔥",
         "number_of_videos": "45000+",
-        "price": 49,
+        "price": 50,
         "validity": "180 days",
         "image_url": "https://ibb.co/ZRqKVvRQ",
         "description": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍\n4. 𝙉𝙀𝙒 𝙑𝙄𝘿𝙀𝙊𝙎 𝙐𝙋𝙇𝙊𝘼𝘿𝙀𝘿 𝙀𝙑𝙀𝙍𝙔 𝙎𝙐𝙉𝘿𝘼𝙔 ✅",
@@ -92,12 +92,12 @@ PLANS_DATA = {
         "delivery_link": "https://t.me/+delivery_link_2"
     },
     "plan_3": {
-        "id": 3,
-        "name": "Premium Creator Pack 3",
+        "id": "plan_3",
+        "name": "𝘾𝙃𝙄!𝙇𝘿 𝙑𝙄𝘿!𝙀𝙊 ( 𝘾.𝙋) 🔥👀",
         "number_of_videos": "70000+",
-        "price": 49,
+        "price": 50,
         "validity": "180 days",
-        "image_url": "https://i.ibb.co/21H7BGM2/course3.jpg",
+        "image_url": "https://ibb.co/21H7BGM2",
         "description": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍\n4. 𝙉𝙀𝙒 𝙑𝙄𝘿𝙀𝙊𝙎 𝙐𝙋𝙇𝙊𝘼𝘿𝙀𝘿 𝙀𝙑𝙀𝙍𝙔 𝙎𝙐𝙉𝘿𝘼𝙔 ✅",
         "demo_videos": [
             "https://videotourl.com/videos/1791598226633-9d219b40-bf0b-4774-b493-6449c47d5ef1.mp4",
@@ -111,12 +111,12 @@ PLANS_DATA = {
         "delivery_link": "https://t.me/+delivery_link_3"
     },
     "plan_4": {
-        "id": 4,
-        "name": "Pro Video Collection 4",
+        "id": "plan_4",
+        "name": "𝙍!@𝙋𝙀 𝙑𝙄𝘿𝙀𝙊𝙎 💦👀",
         "number_of_videos": "40000+",
-        "price": 69,
+        "price": 70,
         "validity": "180 days",
-        "image_url": "https://i.ibb.co/QF2v05qK/course4.jpg",
+        "image_url": "https://ibb.co/QF2v05qK",
         "description": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍\n4. 𝙉𝙀𝙒 𝙑𝙄𝘿𝙀𝙊𝙎 𝙐𝙋𝙇𝙊𝘼𝘿𝙀𝘿 𝙀𝙑𝙀𝙍𝙔 𝙎𝙐𝙉𝘿𝘼𝙔 ✅",
         "demo_videos": [
             "https://videotourl.com/videos/1791598317965-12b2368c-6035-4e43-b708-df28bcd246b6.mp4",
@@ -132,12 +132,12 @@ PLANS_DATA = {
         "delivery_link": "https://t.me/+delivery_link_4"
     },
     "plan_5": {
-        "id": 5,
-        "name": "Advanced Media Pack 5",
+        "id": "plan_5",
+        "name": "𝘽𝘼𝘼𝙋 𝘽𝙀𝙏𝙄 🔥💦",
         "number_of_videos": "30000+",
-        "price": 58,
+        "price": 40,
         "validity": "180 days",
-        "image_url": "https://i.ibb.co/5X0hc5dd/course5.jpg",
+        "image_url": "https://ibb.co/5X0hc5dd",
         "description": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍\n4. 𝙉𝙀𝙒 𝙑𝙄𝘿𝙀𝙊𝙎 𝙐𝙋𝙇𝙊𝘼𝘿𝙀𝘿 𝙀𝙑𝙀𝙍𝙔 𝙎𝙐𝙉𝘿𝘼𝙔 ✅",
         "demo_videos": [
             "https://videotourl.com/videos/1791609855846-9b6bac98-1fcf-4d60-b612-3e5abaf6be7e.mp4",
@@ -146,12 +146,12 @@ PLANS_DATA = {
         "delivery_link": "https://t.me/+delivery_link_5"
     },
     "plan_6": {
-        "id": 6,
-        "name": "Starter Creators Pack 6",
+        "id": "plan_6",
+        "name": "𝘽𝙃𝘼𝘽𝙃𝙄 𝙑𝙄𝘿𝙀𝙊𝙎  💦👅",
         "number_of_videos": "56000+",
-        "price": 39,
+        "price": 40,
         "validity": "180 days",
-        "image_url": "https://i.ibb.co/HLw36KQ4/course6.jpg",
+        "image_url": "https://ibb.co/N6wzXDHw",
         "description": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍\n4. 𝙉𝙀𝙒 𝙑𝙄𝘿𝙀𝙊𝙎 𝙐𝙋𝙇𝙊𝘼𝘿𝙀𝘿 𝙀𝙑𝙀𝙍𝙔 𝙎𝙐𝙉𝘿𝘼𝙔 ✅",
         "demo_videos": [
             "https://videotourl.com/videos/1791611037316-4db456f2-f82c-4468-9f48-381341ed6e55.mp4",
@@ -164,12 +164,12 @@ PLANS_DATA = {
         "delivery_link": "https://t.me/+delivery_link_6"
     },
     "plan_7": {
-        "id": 7,
-        "name": "Mega Creator Bundle 7",
+        "id": "plan_7",
+        "name": "𝘽𝙃𝘼𝙄 𝘽𝙀𝙃𝘼𝙉 🔥🥵 ",
         "number_of_videos": "67000+",
-        "price": 49,
+        "price": 45,
         "validity": "180 days",
-        "image_url": "https://i.ibb.co/9kKCd6ZF/course7.jpg",
+        "image_url": "https://ibb.co/9kKCd6ZF",
         "description": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍\n4. 𝙉𝙀𝙒 𝙑𝙄𝘿𝙀𝙊𝙎 𝙐𝙋𝙇𝙊𝘼𝘿𝙀𝘿 𝙀𝙑𝙀𝙍𝙔 𝙎𝙐𝙉𝘿𝘼𝙔 ✅",
         "demo_videos": [
             "https://videotourl.com/videos/1791611423923-36dbbbf3-84c1-4754-a7e4-dc05798eaa03.mp4",
@@ -181,12 +181,12 @@ PLANS_DATA = {
         "delivery_link": "https://t.me/+delivery_link_7"
     },
     "plan_8": {
-        "id": 8,
-        "name": "Elite Video Library 8",
+        "id": "plan_8",
+        "name": "𝙂𝙄𝙍𝙇𝙎 𝙒𝙄𝙏𝙃 𝘼𝙉!𝙈@𝙇🔥",
         "number_of_videos": "18000+",
-        "price": 49,
+        "price": 45,
         "validity": "180 days",
-        "image_url": "https://i.ibb.co/C5KZBm7f/course8.jpg",
+        "image_url": "https://ibb.co/WNP6gCzD",
         "description": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍",
         "demo_videos": [
             "https://videotourl.com/videos/1791611713436-2f106a4b-9ee1-4d9b-8e06-c30a0fe309e7.mp4",
@@ -195,12 +195,12 @@ PLANS_DATA = {
         "delivery_link": "https://t.me/+delivery_link_8"
     },
     "plan_9": {
-        "id": 9,
-        "name": "Super Viral Pack 9",
-        "number_of_videos": "70000+",
-        "price": 69,
+        "id": "plan_9",
+        "name": "𝙈𝙄𝙓 𝙂𝙍𝙊𝙐𝙋 1LAKH 𝙑𝙄𝘿𝙀𝙊𝙎 🥵  ",
+        "number_of_videos": "100000+",
+        "price": 70,
         "validity": "180 days",
-        "image_url": "https://i.ibb.co/qFhKnzcH/course9.jpg",
+        "image_url": "https://ibb.co/zVvdkf09",
         "description": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍\n4. 𝙉𝙀𝙒 𝙑𝙄𝘿𝙀𝙊𝙎 𝙐𝙋𝙇𝙊𝘼𝘿𝙀𝘿 𝙀𝙑𝙀𝙍𝙔 𝙁𝙍𝙄𝘿𝘼𝙔 ✅.",
         "demo_videos": [
             "https://videotourl.com/videos/1791611593469-187437c5-8f84-41c6-afa1-3d61feb9ff72.mp4",
