@@ -40,8 +40,8 @@ IST = pytz.timezone("Asia/Kolkata")
 PROMO_COOLDOWN_SECONDS = 600  # 10 minutes
 
 # --- PLACEHOLDER URLS & CONFIGURATIONS ---
-START_IMAGE = "https://ibb.co/Fb6S1mYg"
-MAIN_WELCOME_IMAGE = "https://ibb.co/Fb6S1mYg"
+START_IMAGE = "https://i.ibb.co/Fb6S1mYg/course1.jpg"
+MAIN_WELCOME_IMAGE = "https://i.ibb.co/Fb6S1mYg/course1.jpg"
 DEFAULT_UPI = "haaland78@ybl"
 DEFAULT_PROOF_URL = "https://t.me/placeholder_proof"
 DEFAULT_SUPPORT_URL = "https://t.me/placeholder_support"
@@ -53,133 +53,168 @@ DEFAULT_RATING_MSG = (
     "4. **Transparent Proofs:** Check our proof channel for real customer reviews!"
 )
 
-# --- PLANS CONFIGURATION (EDIT NAME, PRICE, DEMOS, LINKS HERE) ---
+# --- PLANS CONFIGURATION (EDIT TITLE, PRICE, DEMOS, LINKS HERE) ---
 PLANS_DATA = {
     "plan_1": {
-        "id": "plan_1",
-        "name": "INSTAGRAM Pack 1",
+        "id": 1,
+        "name": "Ultimate Masterclass Pack 1",
         "number_of_videos": "50000+",
-        "price": 40,
+        "price": 49,
         "validity": "180 days",
-        "image_url": "https://ibb.co/Fb6S1mYg",
-        "description": "1. YOU CAN SAVE IN GALLERY ✅\n2. NO ANY ADS ❌\n3. HIGH QUALITY VIDEOS 😍\n4. NEW VIDEOS UPLOADED EVERY SUNDAY ✅\n5. High quality and new videos best in telegram",
+        "image_url": "https://i.ibb.co/Fb6S1mYg/course1.jpg",
+        "description": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍\n4. 𝙉𝙀𝙒 𝙑𝙄𝘿𝙀𝙊𝙎 𝙐𝙋𝙇𝙊𝘼𝘿𝙀𝘿 𝙀𝙑𝙀𝙍𝙔 𝙎𝙐𝙉𝘿𝘼𝙔 ✅",
         "demo_videos": [
             "https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4",
-            "https://videotourl.com/videos/1791607674607-203922d8-e261-4085-90fc-4be2fd62a6fb.mp4"
+            "https://videotourl.com/videos/1791607674607-203922d8-e261-4085-90fc-4be2fd62a6fb.mp4",
+            "https://videotourl.com/videos/1791607662133-116f8c11-861a-4d4c-94a4-411fbd79a4f4.mp4",
+            "https://videotourl.com/videos/1791607553470-a87b7709-29e5-449b-89d2-49ce97c8e367.mp4",
+            "https://videotourl.com/videos/1791607607288-b1cc3341-7d49-473e-8544-840992806dab.mp4",
+            "https://videotourl.com/videos/1791607585444-8a7d8e39-2917-4d23-949e-c048fcbacb2f.mp4",
+            "https://videotourl.com/videos/1791607617748-9c8da0dd-313e-4a4d-862b-7ccf034383b7.mp4"
         ],
         "delivery_link": "https://t.me/+delivery_link_1"
     },
     "plan_2": {
-        "id": "plan_2",
-        "name": "INSTAGRAM Pack 2",
-        "number_of_videos": "50000+",
-        "price": 40,
+        "id": 2,
+        "name": "Exclusive Video Bundle 2",
+        "number_of_videos": "45000+",
+        "price": 49,
         "validity": "180 days",
-        "image_url": "https://ibb.co/Fb6S1mYg",
-        "description": "1. YOU CAN SAVE IN GALLERY ✅\n2. NO ANY ADS ❌\n3. HIGH QUALITY VIDEOS 😍\n4. NEW VIDEOS UPLOADED EVERY SUNDAY ✅\n5. High quality and new videos best in telegram",
+        "image_url": "https://i.ibb.co/ZRqKVvRQ/course2.jpg",
+        "description": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍\n4. 𝙉𝙀𝙒 𝙑𝙄𝘿𝙀𝙊𝙎 𝙐𝙋𝙇𝙊𝘼𝘿𝙀𝘿 𝙀𝙑𝙀𝙍𝙔 𝙎𝙐𝙉𝘿𝘼𝙔 ✅",
         "demo_videos": [
-            "https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4"
+            "https://videotourl.com/videos/1791609530271-d1845e11-78bd-4465-a0e3-3e0dd57fb424.mp4",
+            "https://videotourl.com/videos/1791610410648-c50ab2d2-b1b2-4998-8f5f-43a5f719b603.mp4",
+            "https://videotourl.com/videos/1791609652325-1646ca32-e73f-4a5a-9874-a0f4e401c6bb.mp4",
+            "https://videotourl.com/videos/1791609624603-358124e2-dbc4-43b2-9772-e18c1df57397.mp4",
+            "https://videotourl.com/videos/1791609569957-a7ce2e8a-e185-4dc6-893c-298a2d9c1b4c.mp4"
         ],
         "delivery_link": "https://t.me/+delivery_link_2"
     },
     "plan_3": {
-        "id": "plan_3",
-        "name": "INSTAGRAM Pack 3",
-        "number_of_videos": "50000+",
-        "price": 40,
+        "id": 3,
+        "name": "Premium Creator Pack 3",
+        "number_of_videos": "70000+",
+        "price": 49,
         "validity": "180 days",
-        "image_url": "https://ibb.co/Fb6S1mYg",
-        "description": "1. YOU CAN SAVE IN GALLERY ✅\n2. NO ANY ADS ❌\n3. HIGH QUALITY VIDEOS 😍\n4. NEW VIDEOS UPLOADED EVERY SUNDAY ✅\n5. High quality and new videos best in telegram",
+        "image_url": "https://i.ibb.co/21H7BGM2/course3.jpg",
+        "description": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍\n4. 𝙉𝙀𝙒 𝙑𝙄𝘿𝙀𝙊𝙎 𝙐𝙋𝙇𝙊𝘼𝘿𝙀𝘿 𝙀𝙑𝙀𝙍𝙔 𝙎𝙐𝙉𝘿𝘼𝙔 ✅",
         "demo_videos": [
-            "https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4"
+            "https://videotourl.com/videos/1791598226633-9d219b40-bf0b-4774-b493-6449c47d5ef1.mp4",
+            "https://videotourl.com/videos/1791598035486-79178a34-a631-49d2-870e-ff3425f1c058.mp4",
+            "https://videotourl.com/videos/1791611314862-1e0e5b81-0a04-436a-9749-4f5e9115404f.mp4",
+            "https://videotourl.com/videos/1791598059935-f6722923-e315-4b97-aaeb-e7b0af379f2b.mp4",
+            "https://videotourl.com/videos/1791598126801-a117ace0-e399-46e6-b697-0d3da6efeedd.mp4",
+            "https://videotourl.com/videos/1791598104865-7bca6c3f-db24-465d-9688-d153131af1e5.mp4",
+            "https://videotourl.com/videos/1791598207010-15f8101c-d87e-4e83-bd6a-43a333204662.mp4"
         ],
         "delivery_link": "https://t.me/+delivery_link_3"
     },
     "plan_4": {
-        "id": "plan_4",
-        "name": "INSTAGRAM Pack 4",
-        "number_of_videos": "50000+",
-        "price": 40,
+        "id": 4,
+        "name": "Pro Video Collection 4",
+        "number_of_videos": "40000+",
+        "price": 69,
         "validity": "180 days",
-        "image_url": "https://ibb.co/Fb6S1mYg",
-        "description": "1. YOU CAN SAVE IN GALLERY ✅\n2. NO ANY ADS ❌\n3. HIGH QUALITY VIDEOS 😍\n4. NEW VIDEOS UPLOADED EVERY SUNDAY ✅\n5. High quality and new videos best in telegram",
+        "image_url": "https://i.ibb.co/QF2v05qK/course4.jpg",
+        "description": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍\n4. 𝙉𝙀𝙒 𝙑𝙄𝘿𝙀𝙊𝙎 𝙐𝙋𝙇𝙊𝘼𝘿𝙀𝘿 𝙀𝙑𝙀𝙍𝙔 𝙎𝙐𝙉𝘿𝘼𝙔 ✅",
         "demo_videos": [
-            "https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4"
+            "https://videotourl.com/videos/1791598317965-12b2368c-6035-4e43-b708-df28bcd246b6.mp4",
+            "https://videotourl.com/videos/1791609986226-0b727823-bf05-42b7-80e8-c949f04b95ab.mp4",
+            "https://videotourl.com/videos/1791598333066-6d6fc74f-945c-4641-99d1-d862e59790d4.mp4",
+            "https://videotourl.com/videos/1791598348006-882fbe39-db59-4bb7-8636-1c2645fb93c0.mp4",
+            "https://videotourl.com/videos/1791611260635-789f7a13-25cd-4204-8ffc-455168319040.mp4",
+            "https://videotourl.com/videos/1791598360862-d0ddd962-c4e7-4c98-a860-d360bf6779f8.mp4",
+            "https://videotourl.com/videos/1791601968259-cb7b49a5-a8c5-45f9-9156-e08f71b052d0.mp4",
+            "https://videotourl.com/videos/1791598382840-4245fa8e-38f8-4737-8bb9-a2b8641a3d0f.mp4",
+            "https://videotourl.com/videos/1791598397313-ff9dd5ef-d489-4715-a2ca-a71c8923f162.mp4"
         ],
         "delivery_link": "https://t.me/+delivery_link_4"
     },
     "plan_5": {
-        "id": "plan_5",
-        "name": "INSTAGRAM Pack 5",
-        "number_of_videos": "50000+",
-        "price": 40,
+        "id": 5,
+        "name": "Advanced Media Pack 5",
+        "number_of_videos": "30000+",
+        "price": 58,
         "validity": "180 days",
-        "image_url": "https://ibb.co/Fb6S1mYg",
-        "description": "1. YOU CAN SAVE IN GALLERY ✅\n2. NO ANY ADS ❌\n3. HIGH QUALITY VIDEOS 😍\n4. NEW VIDEOS UPLOADED EVERY SUNDAY ✅\n5. High quality and new videos best in telegram",
+        "image_url": "https://i.ibb.co/5X0hc5dd/course5.jpg",
+        "description": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍\n4. 𝙉𝙀𝙒 𝙑𝙄𝘿𝙀𝙊𝙎 𝙐𝙋𝙇𝙊𝘼𝘿𝙀𝘿 𝙀𝙑𝙀𝙍𝙔 𝙎𝙐𝙉𝘿𝘼𝙔 ✅",
         "demo_videos": [
-            "https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4"
+            "https://videotourl.com/videos/1791609855846-9b6bac98-1fcf-4d60-b612-3e5abaf6be7e.mp4",
+            "https://videotourl.com/videos/1791614058029-1220e2df-44c4-467d-bbd7-755af32ada0c.mp4"
         ],
         "delivery_link": "https://t.me/+delivery_link_5"
     },
     "plan_6": {
-        "id": "plan_6",
-        "name": "INSTAGRAM Pack 6",
-        "number_of_videos": "50000+",
-        "price": 40,
+        "id": 6,
+        "name": "Starter Creators Pack 6",
+        "number_of_videos": "56000+",
+        "price": 39,
         "validity": "180 days",
-        "image_url": "https://ibb.co/Fb6S1mYg",
-        "description": "1. YOU CAN SAVE IN GALLERY ✅\n2. NO ANY ADS ❌\n3. HIGH QUALITY VIDEOS 😍\n4. NEW VIDEOS UPLOADED EVERY SUNDAY ✅\n5. High quality and new videos best in telegram",
+        "image_url": "https://i.ibb.co/HLw36KQ4/course6.jpg",
+        "description": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍\n4. 𝙉𝙀𝙒 𝙑𝙄𝘿𝙀𝙊𝙎 𝙐𝙋𝙇𝙊𝘼𝘿𝙀𝘿 𝙀𝙑𝙀𝙍𝙔 𝙎𝙐𝙉𝘿𝘼𝙔 ✅",
         "demo_videos": [
-            "https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4"
+            "https://videotourl.com/videos/1791611037316-4db456f2-f82c-4468-9f48-381341ed6e55.mp4",
+            "https://videotourl.com/videos/1791611085614-c863517b-d989-4d6f-b6ef-d23db0b73f5a.mp4",
+            "https://videotourl.com/videos/1791611220352-ba6538bc-4db1-401e-81f7-88c53824e27f.mp4",
+            "https://videotourl.com/videos/1791609479203-02acf86c-6132-4bc2-8041-9f43ab529748.mp4",
+            "https://videotourl.com/videos/1791611168222-86d679dd-8a24-46fb-8b06-d59cc97e84c2.mp4",
+            "https://videotourl.com/videos/1791611005214-c25159ac-d514-4eff-8061-a25465ff6eba.mp4"
         ],
         "delivery_link": "https://t.me/+delivery_link_6"
     },
     "plan_7": {
-        "id": "plan_7",
-        "name": "INSTAGRAM Pack 7",
-        "number_of_videos": "50000+",
-        "price": 40,
+        "id": 7,
+        "name": "Mega Creator Bundle 7",
+        "number_of_videos": "67000+",
+        "price": 49,
         "validity": "180 days",
-        "image_url": "https://ibb.co/Fb6S1mYg",
-        "description": "1. YOU CAN SAVE IN GALLERY ✅\n2. NO ANY ADS ❌\n3. HIGH QUALITY VIDEOS 😍\n4. NEW VIDEOS UPLOADED EVERY SUNDAY ✅\n5. High quality and new videos best in telegram",
+        "image_url": "https://i.ibb.co/9kKCd6ZF/course7.jpg",
+        "description": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍\n4. 𝙉𝙀𝙒 𝙑𝙄𝘿𝙀𝙊𝙎 𝙐𝙋𝙇𝙊𝘼𝘿𝙀𝘿 𝙀𝙑𝙀𝙍𝙔 𝙎𝙐𝙉𝘿𝘼𝙔 ✅",
         "demo_videos": [
-            "https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4"
+            "https://videotourl.com/videos/1791611423923-36dbbbf3-84c1-4754-a7e4-dc05798eaa03.mp4",
+            "https://videotourl.com/videos/1791611350514-052fe889-5ac7-4446-91ef-2f928070e131.mp4",
+            "https://videotourl.com/videos/1791609591492-b5b0f616-27c5-436f-9aa9-e70720337677.mp4",
+            "https://videotourl.com/videos/1791609952353-7ee9382f-6db6-4c43-86ed-c8f418a3282c.mp4",
+            "https://videotourl.com/videos/1791609450717-98fd3d4d-533c-46fc-a290-9f9f937b6721.mp4"
         ],
         "delivery_link": "https://t.me/+delivery_link_7"
     },
     "plan_8": {
-        "id": "plan_8",
-        "name": "INSTAGRAM Pack 8",
-        "number_of_videos": "50000+",
-        "price": 40,
+        "id": 8,
+        "name": "Elite Video Library 8",
+        "number_of_videos": "18000+",
+        "price": 49,
         "validity": "180 days",
-        "image_url": "https://ibb.co/Fb6S1mYg",
-        "description": "1. YOU CAN SAVE IN GALLERY ✅\n2. NO ANY ADS ❌\n3. HIGH QUALITY VIDEOS 😍\n4. NEW VIDEOS UPLOADED EVERY SUNDAY ✅\n5. High quality and new videos best in telegram",
+        "image_url": "https://i.ibb.co/C5KZBm7f/course8.jpg",
+        "description": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍",
         "demo_videos": [
-            "https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4"
+            "https://videotourl.com/videos/1791611713436-2f106a4b-9ee1-4d9b-8e06-c30a0fe309e7.mp4",
+            "https://videotourl.com/videos/1791611779829-f05b75a9-65c7-441d-ad89-5d5f15301b01.mp4"
         ],
         "delivery_link": "https://t.me/+delivery_link_8"
     },
     "plan_9": {
-        "id": "plan_9",
-        "name": "INSTAGRAM Pack 9",
-        "number_of_videos": "50000+",
-        "price": 40,
+        "id": 9,
+        "name": "Super Viral Pack 9",
+        "number_of_videos": "70000+",
+        "price": 69,
         "validity": "180 days",
-        "image_url": "https://ibb.co/Fb6S1mYg",
-        "description": "1. YOU CAN SAVE IN GALLERY ✅\n2. NO ANY ADS ❌\n3. HIGH QUALITY VIDEOS 😍\n4. NEW VIDEOS UPLOADED EVERY SUNDAY ✅\n5. High quality and new videos best in telegram",
+        "image_url": "https://i.ibb.co/qFhKnzcH/course9.jpg",
+        "description": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍\n4. 𝙉𝙀𝙒 𝙑𝙄𝘿𝙀𝙊𝙎 𝙐𝙋𝙇𝙊𝘼𝘿𝙀𝘿 𝙀𝙑𝙀𝙍𝙔 𝙁𝙍𝙄𝘿𝘼𝙔 ✅.",
         "demo_videos": [
-            "https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4"
+            "https://videotourl.com/videos/1791611593469-187437c5-8f84-41c6-afa1-3d61feb9ff72.mp4",
+            "https://videotourl.com/videos/1791611552865-c2cf6f7d-1544-4c34-9bdb-5e5fb2092584.mp4"
         ],
         "delivery_link": "https://t.me/+delivery_link_9"
     },
     "plan_10": {
-        "id": "plan_10",
+        "id": 10,
         "name": "INSTAGRAM Pack 10",
         "number_of_videos": "50000+",
         "price": 40,
         "validity": "180 days",
-        "image_url": "https://ibb.co/Fb6S1mYg",
+        "image_url": "https://i.ibb.co/Fb6S1mYg/course1.jpg",
         "description": "1. YOU CAN SAVE IN GALLERY ✅\n2. NO ANY ADS ❌\n3. HIGH QUALITY VIDEOS 😍\n4. NEW VIDEOS UPLOADED EVERY SUNDAY ✅\n5. High quality and new videos best in telegram",
         "demo_videos": [
             "https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4"
@@ -187,12 +222,12 @@ PLANS_DATA = {
         "delivery_link": "https://t.me/+delivery_link_10"
     },
     "plan_11": {
-        "id": "plan_11",
+        "id": 11,
         "name": "INSTAGRAM Pack 11",
         "number_of_videos": "50000+",
         "price": 40,
         "validity": "180 days",
-        "image_url": "https://ibb.co/Fb6S1mYg",
+        "image_url": "https://i.ibb.co/Fb6S1mYg/course1.jpg",
         "description": "1. YOU CAN SAVE IN GALLERY ✅\n2. NO ANY ADS ❌\n3. HIGH QUALITY VIDEOS 😍\n4. NEW VIDEOS UPLOADED EVERY SUNDAY ✅\n5. High quality and new videos best in telegram",
         "demo_videos": [
             "https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4"
@@ -200,12 +235,12 @@ PLANS_DATA = {
         "delivery_link": "https://t.me/+delivery_link_11"
     },
     "plan_12": {
-        "id": "plan_12",
+        "id": 12,
         "name": "INSTAGRAM Pack 12",
         "number_of_videos": "50000+",
         "price": 40,
         "validity": "180 days",
-        "image_url": "https://ibb.co/Fb6S1mYg",
+        "image_url": "https://i.ibb.co/Fb6S1mYg/course1.jpg",
         "description": "1. YOU CAN SAVE IN GALLERY ✅\n2. NO ANY ADS ❌\n3. HIGH QUALITY VIDEOS 😍\n4. NEW VIDEOS UPLOADED EVERY SUNDAY ✅\n5. High quality and new videos best in telegram",
         "demo_videos": [
             "https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4"
@@ -213,12 +248,12 @@ PLANS_DATA = {
         "delivery_link": "https://t.me/+delivery_link_12"
     },
     "plan_13": {
-        "id": "plan_13",
+        "id": 13,
         "name": "INSTAGRAM Pack 13",
         "number_of_videos": "50000+",
         "price": 40,
         "validity": "180 days",
-        "image_url": "https://ibb.co/Fb6S1mYg",
+        "image_url": "https://i.ibb.co/Fb6S1mYg/course1.jpg",
         "description": "1. YOU CAN SAVE IN GALLERY ✅\n2. NO ANY ADS ❌\n3. HIGH QUALITY VIDEOS 😍\n4. NEW VIDEOS UPLOADED EVERY SUNDAY ✅\n5. High quality and new videos best in telegram",
         "demo_videos": [
             "https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4"
@@ -226,12 +261,12 @@ PLANS_DATA = {
         "delivery_link": "https://t.me/+delivery_link_13"
     },
     "plan_14": {
-        "id": "plan_14",
+        "id": 14,
         "name": "INSTAGRAM Pack 14",
         "number_of_videos": "50000+",
         "price": 40,
         "validity": "180 days",
-        "image_url": "https://ibb.co/Fb6S1mYg",
+        "image_url": "https://i.ibb.co/Fb6S1mYg/course1.jpg",
         "description": "1. YOU CAN SAVE IN GALLERY ✅\n2. NO ANY ADS ❌\n3. HIGH QUALITY VIDEOS 😍\n4. NEW VIDEOS UPLOADED EVERY SUNDAY ✅\n5. High quality and new videos best in telegram",
         "demo_videos": [
             "https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4"
@@ -239,12 +274,12 @@ PLANS_DATA = {
         "delivery_link": "https://t.me/+delivery_link_14"
     },
     "plan_15": {
-        "id": "plan_15",
+        "id": 15,
         "name": "INSTAGRAM Pack 15",
         "number_of_videos": "50000+",
         "price": 40,
         "validity": "180 days",
-        "image_url": "https://ibb.co/Fb6S1mYg",
+        "image_url": "https://i.ibb.co/Fb6S1mYg/course1.jpg",
         "description": "1. YOU CAN SAVE IN GALLERY ✅\n2. NO ANY ADS ❌\n3. HIGH QUALITY VIDEOS 😍\n4. NEW VIDEOS UPLOADED EVERY SUNDAY ✅\n5. High quality and new videos best in telegram",
         "demo_videos": [
             "https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4"
@@ -252,12 +287,12 @@ PLANS_DATA = {
         "delivery_link": "https://t.me/+delivery_link_15"
     },
     "plan_16": {
-        "id": "plan_16",
+        "id": 16,
         "name": "art",
         "number_of_videos": "58000+",
         "price": 40,
         "validity": "180 days",
-        "image_url": "https://ibb.co/Fb6S1mYg",
+        "image_url": "https://i.ibb.co/Fb6S1mYg/course1.jpg",
         "description": "1. YOU CAN SAVE IN GALLERY ✅\n2. NO ANY ADS ❌\n3. HIGH QUALITY VIDEOS 😍\n4. NEW VIDEOS UPLOADED EVERY SUNDAY ✅\n5. High quality and new videos best in telegram",
         "demo_videos": [
             "https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4"
@@ -265,12 +300,12 @@ PLANS_DATA = {
         "delivery_link": "https://t.me/+delivery_link_16"
     },
     "plan_17": {
-        "id": "plan_17",
+        "id": 17,
         "name": "INSTAGRAM Pack 17",
         "number_of_videos": "50000+",
         "price": 40,
         "validity": "180 days",
-        "image_url": "https://ibb.co/Fb6S1mYg",
+        "image_url": "https://i.ibb.co/Fb6S1mYg/course1.jpg",
         "description": "1. YOU CAN SAVE IN GALLERY ✅\n2. NO ANY ADS ❌\n3. HIGH QUALITY VIDEOS 😍\n4. NEW VIDEOS UPLOADED EVERY SUNDAY ✅\n5. High quality and new videos best in telegram",
         "demo_videos": [
             "https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4"
@@ -278,34 +313,34 @@ PLANS_DATA = {
         "delivery_link": "https://t.me/+delivery_link_17"
     },
     "plan_18": {
-        "id": "plan_18",
+        "id": 18,
         "name": "Multiple Plan Bundle (Any 4)",
         "number_of_videos": "60",
         "price": 120,
         "validity": "180 days",
-        "image_url": "https://ibb.co/Fb6S1mYg",
+        "image_url": "https://i.ibb.co/Fb6S1mYg/course1.jpg",
         "description": "Choose any 4 plans priced at ₹50 or less! Select 4 items to continue.",
         "demo_videos": [],
         "delivery_link": "https://t.me/+delivery_link_18"
     },
     "plan_19": {
-        "id": "plan_19",
+        "id": 19,
         "name": "Direct Access Link",
         "number_of_videos": "1",
         "price": 50,
         "validity": "180 days",
-        "image_url": "https://ibb.co/Fb6S1mYg",
+        "image_url": "https://i.ibb.co/Fb6S1mYg/course1.jpg",
         "description": "Direct link delivery package.",
         "demo_videos": [],
         "delivery_link": "https://t.me/+delivery_link_19"
     },
     "plan_20": {
-        "id": "plan_20",
+        "id": 20,
         "name": "All VIP Lifetime Pack",
         "number_of_videos": "500000+",
         "price": 499,
         "validity": "Lifetime",
-        "image_url": "https://ibb.co/Fb6S1mYg",
+        "image_url": "https://i.ibb.co/Fb6S1mYg/course1.jpg",
         "description": "1. YOU CAN SAVE IN GALLERY ✅\n2. NO ANY ADS ❌\n3. HIGH QUALITY VIDEOS 😍\n4. NEW VIDEOS UPLOADED EVERY SUNDAY ✅\n5. High quality and new videos best in telegram",
         "demo_videos": [],
         "delivery_link": "https://t.me/+delivery_link_20"
@@ -374,7 +409,6 @@ def init_db():
     for k, v in defaults.items():
         cursor.execute("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", (k, v))
 
-    # Sync all code plan changes directly into SQLite on every startup
     for pid, pdata in PLANS_DATA.items():
         demos_str = ",".join(pdata.get("demo_videos", []))
         cursor.execute("""
@@ -489,14 +523,56 @@ def make_button(text, callback_data=None, url=None, style=None):
     return InlineKeyboardButton(text, **kwargs)
 
 
-# --- CLEAN CHAT HELPER ---
-async def safe_delete_message(message):
+# --- CLEAN BOT MESSAGE HELPER (NEVER DELETES USER MESSAGES) ---
+async def safe_delete_bot_message(message):
     if not message:
         return
     try:
         await message.delete()
     except Exception:
         pass
+
+
+async def send_age_gate_screen(context: ContextTypes.DEFAULT_TYPE, chat_id: int, first_name: str):
+    caption = (
+        f"👋 **Welcome, {first_name}!**\n\n"
+        f"Please confirm your age to continue:"
+    )
+    keyboard = [
+        [
+            make_button("𝙔𝙀𝙎 𝙄 𝘼𝙈 18+ ✅", callback_data="start", style="success"),
+            make_button("𝙄 𝘼𝙈 𝙉𝙊𝙏 18+ ❌", callback_data="exit", style="danger")
+        ]
+    ]
+    await context.bot.send_photo(
+        chat_id=chat_id,
+        photo=START_IMAGE,
+        caption=caption,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="Markdown",
+        protect_content=True
+    )
+
+
+async def send_platform_screen(context: ContextTypes.DEFAULT_TYPE, chat_id: int, first_name: str):
+    caption = (
+        f"👋 **Welcome, {first_name}!**\n\n"
+        f"Which platform are you joining us from?"
+    )
+    keyboard = [
+        [
+            make_button("Instagram", callback_data="platform_instagram", style="primary"),
+            make_button("Facebook", callback_data="platform_facebook", style="danger")
+        ]
+    ]
+    await context.bot.send_photo(
+        chat_id=chat_id,
+        photo=START_IMAGE,
+        caption=caption,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="Markdown",
+        protect_content=True
+    )
 
 
 # --- START & AGE GATE COMMAND ---
@@ -518,26 +594,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     conn.commit()
     conn.close()
 
-    await safe_delete_message(update.message)
-
-    caption = (
-        f"👋 **Welcome, {user.first_name}!**\n\n"
-        f"Please confirm your age to continue:"
-    )
-    keyboard = [
-        [
-            make_button("𝙔𝙀𝙎 𝙄 𝘼𝙈 18+ ✅", callback_data="start", style="success"),
-            make_button("𝙄 𝘼𝙈 𝙉𝙊𝙏 18+ ❌", callback_data="exit", style="danger")
-        ]
-    ]
-    await context.bot.send_photo(
-        chat_id=update.effective_chat.id,
-        photo=START_IMAGE,
-        caption=caption,
-        reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode="Markdown",
-        protect_content=True
-    )
+    await send_age_gate_screen(context, update.effective_chat.id, user.first_name or "User")
 
 
 async def handle_age_gate(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -547,14 +604,15 @@ async def handle_age_gate(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = query.from_user
 
     if data == "exit":
-        await safe_delete_message(query.message)
+        await safe_delete_bot_message(query.message)
         text = (
             "🚫 **ACCESS DENIED**\n\n"
             "This bot is only for users **18+**.\n\n"
-            "Tap below if you are 18+."
+            "Tap below if you are 18+ or go back."
         )
         keyboard = [
-            [make_button("𝙔𝙀𝙎 𝙄 𝘼𝙈 18+ ✅", callback_data="start", style="success")]
+            [make_button("𝙔𝙀𝙎 𝙄 𝘼𝙈 18+ ✅", callback_data="start", style="success")],
+            [make_button("« Back", callback_data="back_to_start", style="primary")]
         ]
         await context.bot.send_message(
             chat_id=query.message.chat_id,
@@ -564,25 +622,8 @@ async def handle_age_gate(update: Update, context: ContextTypes.DEFAULT_TYPE):
             protect_content=True
         )
     elif data == "start":
-        await safe_delete_message(query.message)
-        caption = (
-            f"👋 **Welcome, {user.first_name}!**\n\n"
-            f"Which platform are you joining us from?"
-        )
-        keyboard = [
-            [
-                make_button("Instagram", callback_data="platform_instagram", style="primary"),
-                make_button("Facebook", callback_data="platform_facebook", style="danger")
-            ]
-        ]
-        await context.bot.send_photo(
-            chat_id=query.message.chat_id,
-            photo=START_IMAGE,
-            caption=caption,
-            reply_markup=InlineKeyboardMarkup(keyboard),
-            parse_mode="Markdown",
-            protect_content=True
-        )
+        await safe_delete_bot_message(query.message)
+        await send_platform_screen(context, query.message.chat_id, user.first_name or "User")
 
 
 async def handle_platform(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -592,13 +633,13 @@ async def handle_platform(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = query.from_user
 
     if data == "platform_facebook":
-        await safe_delete_message(query.message)
+        await safe_delete_bot_message(query.message)
         text = (
             "🚫 **ACCESS DENIED**\n\n"
             "Sorry, this platform is currently not supported.\n\n"
             "Please select **Instagram** to continue."
         )
-        keyboard = [[make_button("« Back", callback_data="back_to_start", style="primary")]]
+        keyboard = [[make_button("« Back", callback_data="start", style="primary")]]
         await context.bot.send_message(
             chat_id=query.message.chat_id,
             text=text,
@@ -629,7 +670,7 @@ def build_plans_only_keyboard():
 
 
 async def send_plans_only(context: ContextTypes.DEFAULT_TYPE, chat_id: int, old_message=None):
-    await safe_delete_message(old_message)
+    await safe_delete_bot_message(old_message)
     text = (
         "💎 **Available Plans**\n\n"
         "Select a plan below to view details and get instant access:"
@@ -646,7 +687,7 @@ async def send_plans_only(context: ContextTypes.DEFAULT_TYPE, chat_id: int, old_
 async def show_main_menu(message, delete_old=False):
     chat_id = message.chat_id
     if delete_old:
-        await safe_delete_message(message)
+        await safe_delete_bot_message(message)
 
     caption = (
         "🚀 **Welcome to the Ultimate Digital Products Hub**\n\n"
@@ -690,12 +731,11 @@ async def handle_demo_text_trigger(update: Update, context: ContextTypes.DEFAULT
     user_id = update.effective_user.id
     if user_id in ADMIN_IDS and user_id in ADMIN_SESSIONS:
         return
-    await safe_delete_message(update.message)
     await show_main_demo_menu(context, update.effective_chat.id)
 
 
 async def show_main_demo_menu(context: ContextTypes.DEFAULT_TYPE, chat_id: int, old_message=None):
-    await safe_delete_message(old_message)
+    await safe_delete_bot_message(old_message)
     text = (
         "🎬 **Choose a Plan Demo to Explore**\n"
         "उस प्लान को चुनें जिसका आप डेमो देखना चाहते हैं:\n\n"
@@ -733,12 +773,17 @@ async def handle_plan_routing(update: Update, context: ContextTypes.DEFAULT_TYPE
         await show_main_demo_menu(context, chat_id, old_message=query.message)
         return
 
-    if data == "back_to_start" or data == "menu_main":
+    if data == "back_to_start":
+        await safe_delete_bot_message(query.message)
+        await send_age_gate_screen(context, chat_id, query.from_user.first_name or "User")
+        return
+
+    if data == "menu_main":
         await show_main_menu(query.message, delete_old=True)
         return
 
     if data == "menu_proof":
-        await safe_delete_message(query.message)
+        await safe_delete_bot_message(query.message)
         proof_url = get_setting("proof_url")
         keyboard = [[make_button("« Back to Menu", callback_data="menu_main", style="primary")]]
         await context.bot.send_message(
@@ -751,7 +796,7 @@ async def handle_plan_routing(update: Update, context: ContextTypes.DEFAULT_TYPE
         return
 
     if data == "menu_support":
-        await safe_delete_message(query.message)
+        await safe_delete_bot_message(query.message)
         support_url = get_setting("support_url")
         keyboard = [[make_button("« Back to Menu", callback_data="menu_main", style="primary")]]
         await context.bot.send_message(
@@ -764,7 +809,7 @@ async def handle_plan_routing(update: Update, context: ContextTypes.DEFAULT_TYPE
         return
 
     if data == "menu_trusted":
-        await safe_delete_message(query.message)
+        await safe_delete_bot_message(query.message)
         rating_msg = get_setting("rating_msg")
         keyboard = [[make_button("« Back to Menu", callback_data="menu_main", style="primary")]]
         await context.bot.send_message(
@@ -777,7 +822,7 @@ async def handle_plan_routing(update: Update, context: ContextTypes.DEFAULT_TYPE
         return
 
     if data == "menu_howtobuy":
-        await safe_delete_message(query.message)
+        await safe_delete_bot_message(query.message)
         guide = (
             "📖 **HOW TO PURCHASE / खरीदने का तरीका**\n\n"
             "**English:**\n"
@@ -847,7 +892,7 @@ async def handle_plan_routing(update: Update, context: ContextTypes.DEFAULT_TYPE
     if data.startswith("submit_pay_"):
         plan_id = data.split("_")[2]
         context.user_data["pending_plan_id"] = plan_id
-        await safe_delete_message(query.message)
+        await safe_delete_bot_message(query.message)
         keyboard = [[make_button("« Back to Menu", callback_data="menu_main", style="primary")]]
         await context.bot.send_message(
             chat_id=chat_id,
@@ -880,7 +925,7 @@ async def show_standard_plan(query, plan_num, context: ContextTypes.DEFAULT_TYPE
     pdata = get_plan_info(plan_num)
     if not pdata:
         return
-    await safe_delete_message(query.message)
+    await safe_delete_bot_message(query.message)
     delivery_time = random.randint(1, 4)
 
     caption = (
@@ -912,7 +957,7 @@ async def start_demo_sequence(query, plan_num, index, context: ContextTypes.DEFA
     pdata = get_plan_info(plan_num)
     if not pdata:
         return
-    await safe_delete_message(query.message)
+    await safe_delete_bot_message(query.message)
     demo_urls = pdata.get("demo_videos", [])
 
     if not demo_urls or index >= len(demo_urls):
@@ -963,7 +1008,7 @@ async def show_plan_18(query, context: ContextTypes.DEFAULT_TYPE):
     pdata18 = get_plan_info(18)
     user_id = query.from_user.id
     BUNDLE_STATE[user_id] = set()
-    await safe_delete_message(query.message)
+    await safe_delete_bot_message(query.message)
     caption = (
         f"🎁 **{pdata18['name']} • ₹{format_price(pdata18['price'])}**\n\n"
         f"Select 4 plans priced at ₹50 or less below.\n\n"
@@ -1045,7 +1090,7 @@ async def show_plan_19(query, context: ContextTypes.DEFAULT_TYPE):
     pdata = get_plan_info(19)
     if not pdata:
         return
-    await safe_delete_message(query.message)
+    await safe_delete_bot_message(query.message)
     delivery_url = pdata.get("delivery_link", "https://t.me/+default_link")
     caption = (
         f"📌 **{pdata['name']}**\n\n"
@@ -1072,7 +1117,7 @@ async def show_plan_20(query, context: ContextTypes.DEFAULT_TYPE):
     pdata = get_plan_info(20)
     if not pdata:
         return
-    await safe_delete_message(query.message)
+    await safe_delete_bot_message(query.message)
     caption = (
         f"👑 **{pdata['name']}**\n\n"
         f"• **Price:** ₹{format_price(pdata['price'])}\n"
@@ -1097,7 +1142,7 @@ async def show_plan_20(query, context: ContextTypes.DEFAULT_TYPE):
 
 async def show_plan_20_demo(query, context: ContextTypes.DEFAULT_TYPE):
     pdata = get_plan_info(20)
-    await safe_delete_message(query.message)
+    await safe_delete_bot_message(query.message)
     album = [
         InputMediaPhoto(media="https://i.ibb.co/6y19mX1/sample1.jpg", caption=f"👑 {pdata['name']} Preview (10 Photos Album)"),
         InputMediaPhoto(media="https://i.ibb.co/6y19mX1/sample2.jpg"),
@@ -1130,7 +1175,7 @@ async def initiate_payment(query, plan_id, context: ContextTypes.DEFAULT_TYPE):
     price = pdata["price"] if pdata else 100
     price_str = format_price(price)
     upi_id = get_setting("upi_id")
-    await safe_delete_message(query.message)
+    await safe_delete_bot_message(query.message)
 
     qr_bio = generate_upi_qr(upi_id=upi_id, payee_name="Social Flux", amount=price_str, transaction_note=name)
 
@@ -1336,7 +1381,6 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Unauthorized access.")
         return
 
-    await safe_delete_message(update.message)
     keyboard = [
         [
             make_button("Change UPI", callback_data="adm_set_upi", style="primary"),
@@ -1525,7 +1569,7 @@ def main():
 
     application.add_handler(CallbackQueryHandler(handle_age_gate, pattern="^(start|exit)$"))
     application.add_handler(CallbackQueryHandler(handle_platform, pattern="^platform_"))
-    application.add_handler(CallbackQueryHandler(handle_plan_routing, pattern="^(menu_|plan_view_|demo_|buy_|p18_|submit_pay_|bcast_)"))
+    application.add_handler(CallbackQueryHandler(handle_plan_routing, pattern="^(back_to_start|menu_|plan_view_|demo_|buy_|p18_|submit_pay_|bcast_)"))
     application.add_handler(CallbackQueryHandler(handle_admin_action, pattern="^adm_(approve|reject)_"))
     application.add_handler(CallbackQueryHandler(handle_admin_callbacks, pattern="^adm_"))
 
